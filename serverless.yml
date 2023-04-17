@@ -1,0 +1,108 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: netmind-code-automation # NOTE: update this with your service name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+    dockerSsh: true
+    dockerSshSymlink: ~/.ssh
+  restApiId:
+    dev: g30ih92s42
+    test: ky87e6eagk
+    prod: ya5b7jtid2
+  restApiRootResourceId:
+    dev: ii6veclbu8
+    test: ii6veclbu8
+    prod: v2re8eic7j
+  alerts:
+    stages:
+      - prod
+    dashboards: true
+    nameTemplate: $[functionName]-$[metricName]-Alarm # Optionally - naming template for alarms, can be overwritten in definitions
+    prefixTemplate: $[stackName] # Optionally - override the alarm name prefix
+    topics:
+      alarm: ${self:service}-${opt:stage}-alerts-alarm
+    definitions:  # these defaults are merged with your definitions
+      functionErrors:
+        period: 60 # override period
+        statistic: Sum
+      functionLogErrors:
+        metric: functionLogErrors
+        threshold: 1
+        statistic: Sum
+        period: 60
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        pattern: "\"[ERROR]\""
+    alarms:
+      - functionErrors
+
+provider:
+  name: aws
+  runtime: python3.8
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:*
+        - s3:*
+        - dynamodb:*
+        - sqs:*
+        - ecr:*
+        - secretsmanager:*
+      Resource: "*"
+  apiGateway:
+    restApiId: ${self:custom.restApiId.${opt:stage, self:provider.stage}}
+    restApiRootResourceId: ${self:custom.restApiRootResourceId.${opt:stage, self:provider.stage}}
+  deploymentBucket:
+    name: protagolabs-netmind-deploy
+
+
+functions:
+  check:
+    alarms:
+      - functionLogErrors
+    handler: CodeAutomation.JobCommonService.handle
+    timeout: 15
+    environment:
+      DOMAIN: ${opt:stage}
+      REGION: ${opt:region}
+      ENV_FOR_DYNACONF: ${opt:stage}-${opt:region}
+    events:
+      - http:
+          method: POST
+          path: /check
+          cors: true
+          integration: lambda
+          request:
+            passThrough: WHEN_NO_MATCH
+            template:
+              application/json: '$input.json("$")'
+    layers:
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer:latest
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
+
+
+plugins:
+  - serverless-python-requirements
+  - serverless-latest-layer-version
+  - serverless-plugin-aws-alerts
+package:
+  patterns:
+    - '!*_layer/**'
+    - '!*.sh'
