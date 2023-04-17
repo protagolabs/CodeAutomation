@@ -1,6 +1,6 @@
-from JobCommon.auto_complete.injection_code.hivemind_trainer import *
+from auto_complete.injection_code.hivemind_trainer import *
 from ast import  *
-from JobCommon.auto_complete.tool import *
+from auto_complete.tool import *
 
 hm_mlm_callback_code_injection_list = []
 hm_mlm_training_monitor_code_injection_list = []

@@ -1,7 +1,7 @@
-from JobCommon.auto_complete.injection_code.torch_custom_without_eval import *
+from auto_complete.injection_code.torch_custom_without_eval import *
 from ast import  *
 import ast
-from JobCommon.auto_complete.tool import *
+from  auto_complete.tool import *
 
 torch_no_eval_dist_code_injection_list = []
 torch_no_eval_trainer_code_injection_list = []

@@ -1,7 +1,7 @@
 
-from JobCommon.auto_complete.injection_code.hivemind_custom import *
+from auto_complete.injection_code.hivemind_custom import *
 from ast import *
-from JobCommon.auto_complete.tool import *
+from auto_complete.tool import *
 
 hm_resnet_optimizer_injection_list = []
 hm_resnet_run_hm_resnet_trainer_injection_list = []
@@ -20,9 +20,9 @@ injection_list_collection = [
     hm_resnet_training_monitor_code_injection_list
 ]
 
-from JobCommon.auto_complete.injection_code.hivemind_custom import *
+from auto_complete.injection_code.hivemind_custom import *
 from ast import *
-from JobCommon.auto_complete.tool import *
+from auto_complete.tool import *
 
 
 class HivemindResnetOptimizerHandler(NodeVisitor):

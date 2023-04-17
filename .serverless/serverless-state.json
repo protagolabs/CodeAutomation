@@ -128,7 +128,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "protagolabs-netmind-deploy",
-                "S3Key": "serverless/netmind-code-automation/dev/1681718222288-2023-04-17T07:57:02.288Z/netmind-code-automation.zip"
+                "S3Key": "serverless/netmind-code-automation/dev/1681721356214-2023-04-17T08:49:16.214Z/netmind-code-automation.zip"
               },
               "Handler": "JobCommonService.handle",
               "Runtime": "python3.8",
@@ -158,14 +158,14 @@
               "CheckLogGroup"
             ]
           },
-          "CheckLambdaVersion6Ez9q3vNmJpTdiS48jHgAmTzuMLDRjA5mgfEc5Efs": {
+          "CheckLambdaVersion88lhT0pkXoNOpdlbAMEh3Nfj57JxYs1Z6t0m1PbZ0zI": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CheckLambdaFunction"
               },
-              "CodeSha256": "VYN7G+B+e2qhLRLVgBPFY/f0RQd7M3uPQcH7AMfcQIE="
+              "CodeSha256": "/JwP6eUz+oZNwZj84iS8CKhKB/nbMvY3csUFDhcd7bQ="
             }
           },
           "ApiGatewayResourceCheck": {
@@ -406,7 +406,7 @@
               "CheckLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1681718220027": {
+          "ApiGatewayDeployment1681721353955": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": "g30ih92s42",
@@ -463,7 +463,7 @@
           "CheckLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CheckLambdaVersion6Ez9q3vNmJpTdiS48jHgAmTzuMLDRjA5mgfEc5Efs"
+              "Ref": "CheckLambdaVersion88lhT0pkXoNOpdlbAMEh3Nfj57JxYs1Z6t0m1PbZ0zI"
             },
             "Export": {
               "Name": "sls-netmind-code-automation-dev-CheckLambdaFunctionQualifiedArn"
@@ -632,7 +632,7 @@
         "memory": 1024,
         "runtime": "python3.8",
         "vpc": {},
-        "versionLogicalId": "CheckLambdaVersion6Ez9q3vNmJpTdiS48jHgAmTzuMLDRjA5mgfEc5Efs"
+        "versionLogicalId": "CheckLambdaVersion88lhT0pkXoNOpdlbAMEh3Nfj57JxYs1Z6t0m1PbZ0zI"
       }
     },
     "configValidationMode": "warn",
@@ -659,7 +659,7 @@
         "artifactsS3KeyDirname": "serverless/netmind-code-automation/dev/code-artifacts",
         "deploymentBucket": "protagolabs-netmind-deploy",
         "artifact": "/home/yang.li/CodeAutomation/.serverless/netmind-code-automation.zip",
-        "artifactDirectoryName": "serverless/netmind-code-automation/dev/1681718222288-2023-04-17T07:57:02.288Z"
+        "artifactDirectoryName": "serverless/netmind-code-automation/dev/1681721356214-2023-04-17T08:49:16.214Z"
       }
     },
     "layers": {},
@@ -667,7 +667,7 @@
     "artifact": "/home/yang.li/CodeAutomation/.serverless/netmind-code-automation.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/netmind-code-automation/dev/1681718222288-2023-04-17T07:57:02.288Z",
+    "artifactDirectoryName": "serverless/netmind-code-automation/dev/1681721356214-2023-04-17T08:49:16.214Z",
     "artifact": "netmind-code-automation.zip"
   }
 }

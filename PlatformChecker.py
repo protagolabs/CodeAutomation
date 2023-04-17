@@ -4,7 +4,7 @@ import shutil
 from uuid import uuid4
 
 
-from JobCommon.AstChecker import AstChecker
+from AstChecker import AstChecker
 
 try:
     from AwsServices import aws

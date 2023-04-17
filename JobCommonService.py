@@ -64,11 +64,11 @@ from common.JobConst import (
 
 )
 from common.Messages import msg
-from JobCommon.auto_complete.hivemind_mlm_handler import (
+from auto_complete.hivemind_mlm_handler import (
     HivemindCallbackMonitorHandler,
     hm_mlm_callback_code_injection_list,
 )
-from JobCommon.auto_complete.hivemind_resnet_handler import (
+from auto_complete.hivemind_resnet_handler import (
     HivemindResnetOptimizerHandler,
     HivemindResnetRunTrainerHandler,
     HivemindResnetTrainerHandler,
@@ -76,44 +76,44 @@ from JobCommon.auto_complete.hivemind_resnet_handler import (
     hm_resnet_run_hm_resnet_trainer_injection_list,
     hm_resnet_trainer_injection_list,
 )
-from JobCommon.auto_complete.tensorflow_custom import (
+from auto_complete.tensorflow_custom import (
     TensorflowCustomHandler,
     tf_custom_code_injection_list,
     tensorflow_custom_visited_table
 )
-from JobCommon.auto_complete.tensorflow_trainer import (
+from auto_complete.tensorflow_trainer import (
     TensorflowTrainerHandler,
     tf_trainer_code_injection_list,
     tensorflow_trainer_visited_table
 )
-from JobCommon.auto_complete.tool import (
+from auto_complete.tool import (
     CodeNotCompliantException,
     DuplicateInjectionError,
     InjectionOperation,
     CodeTemplateNotLegalException
 )
-from JobCommon.auto_complete.torch_custom_with_eval import (
+from auto_complete.torch_custom_with_eval import (
     TorchCustomWithEvalTrainDistHandler,
     TorchCustomWithEvalTrainerHandler,
     torch_cus_eval_dist_code_injection_list,
     torch_cus_eval_trainer_code_injection_list,
     pytorch_resnet_custom_visited_table
 )
-from JobCommon.auto_complete.torch_custom_without_eval import (
+from auto_complete.torch_custom_without_eval import (
     TorchCustomWithOutEvalTrainDistHandler,
     TorchCustomWithOutEvalTrainerHandler,
     torch_no_eval_dist_code_injection_list,
     torch_no_eval_trainer_code_injection_list,
     pytorch_mlm_custom_visited_table
 )
-from JobCommon.auto_complete.torch_trainer import (
+from auto_complete.torch_trainer import (
     TorchTrainerHandler,
     torch_trainer_dist_code_injection_list,
     torch_trainer_trainer_code_injection_list,
     pytorch_trainer_visited_table
 )
-from JobCommon.CodeChecker import CodeChecker
-from JobCommon.PlatformChecker import (
+from CodeChecker import CodeChecker
+from PlatformChecker import (
     CodePlatform,
     PlatformChecker,
 )

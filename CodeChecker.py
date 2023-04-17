@@ -4,7 +4,7 @@ import shutil
 from typing import Tuple
 from uuid import uuid4
 
-from JobCommon.AstChecker import AstChecker
+from AstChecker import AstChecker
 
 try:
     from AwsServices import aws
@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     from boto3_layer.python.AwsServices import aws
     from boto3_layer.python.Const import AwsS3
     from webkit_layer.python.utils.Tools import uncompress_code
-from JobCommon.PlatformChecker import CodePlatform
+from PlatformChecker import CodePlatform
 
 platform_check_file_dict = {
     CodePlatform.TENSORFLOW_CUSTOM_TRAINER: ["train_netmind.py"],

@@ -1,8 +1,8 @@
 
-from JobCommon.auto_complete.injection_code.tensorflow_trainer import *
+from auto_complete.injection_code.tensorflow_trainer import *
 from ast import  *
 import ast
-from JobCommon.auto_complete.tool import *
+from auto_complete.tool import *
 
 tf_trainer_code_injection_list = []
 
