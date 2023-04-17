@@ -64,7 +64,6 @@ from common.JobConst import (
 
 )
 from common.Messages import msg
-from common.services.ScheduleService import ScheduleAction
 from JobCommon.auto_complete.hivemind_mlm_handler import (
     HivemindCallbackMonitorHandler,
     hm_mlm_callback_code_injection_list,

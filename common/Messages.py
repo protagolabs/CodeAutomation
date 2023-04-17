@@ -14,4 +14,3 @@ class Messages(object):
 
 
 msg = Messages()
-
