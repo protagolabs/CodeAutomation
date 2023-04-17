@@ -76,7 +76,7 @@ functions:
   check:
     alarms:
       - functionLogErrors
-    handler: CodeAutomation.JobCommonService.handle
+    handler: JobCommonService.handle
     timeout: 15
     environment:
       DOMAIN: ${opt:stage}

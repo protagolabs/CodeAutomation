@@ -1,0 +1,9 @@
+[submodule "webkit_layer"]
+	path = webkit_layer
+	url = git@github.com:protagolabs/webkit_layer.git
+[submodule "k8s_layer"]
+	path = k8s_layer
+	url = git@github.com:protagolabs/k8s_layer.git
+[submodule "boto3_layer"]
+	path = boto3_layer
+	url = git@github.com:protagolabs/boto3_layer.git

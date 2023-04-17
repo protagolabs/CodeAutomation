@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "serverless-latest-layer-version": "^2.1.2",
+    "serverless-plugin-aws-alerts": "^1.7.5",
+    "serverless-python-requirements": "^6.0.0"
+  }
+}
