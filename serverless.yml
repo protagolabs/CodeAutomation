@@ -96,6 +96,12 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
+      
+      
+      
+      
+      
+      
 
 
 plugins:
