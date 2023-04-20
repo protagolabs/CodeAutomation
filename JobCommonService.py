@@ -122,11 +122,7 @@ logger = get_logger(__name__)
 
 
 class JobCommonService:
-    def payload_check(self, event):
-        if "payload" not in event:
-            raise ResourceNotFoundException(
-                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("payload")
-            )
+
 
     """
     Check if the request has jobid
@@ -425,15 +421,7 @@ class JobCommonService:
         }
 
 
-    """
-    Actions supported by this service
-    """
 
-    def action(self, action):
-        actions = {
-            "check": self.check,
-        }
-        return actions.get(action)
 
     """
     Handle api request
@@ -456,7 +444,7 @@ class JobCommonService:
                         break
 
             return Ret.ok(
-                data=self.action(event["action"])(event), code=HttpCode.HTTP_OK
+                data=self.check(event), code=HttpCode.HTTP_OK
             )
         except (
             ResourceNotFoundException,
@@ -478,18 +466,14 @@ handle
 jobCommonService = JobCommonService()
 
 
-def handle(event, context):
-    return todict(jobCommonService.api_gateway(event, context))
 
 if __name__ ==  '__main__':
     service = JobCommonService()
     payload = {
-        "action": "check",
-        "payload":
-            {
+
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
                              "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_resnet_custom_raw.tar.gz"
-            }
+
     }
     ret = service.api_gateway(payload, None)
     print(f'ret : {ret}')
