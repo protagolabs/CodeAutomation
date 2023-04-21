@@ -9,7 +9,6 @@ import uuid
 import zipfile
 from uuid import uuid4
 
-
 try:
     from AwsServices import aws
     from beans.Ret import Ret
@@ -122,7 +121,11 @@ logger = get_logger(__name__)
 
 
 class JobCommonService:
-
+    def payload_check(self, event):
+        if "payload" not in event:
+            raise ResourceNotFoundException(
+                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("payload")
+            )
 
     """
     Check if the request has jobid
@@ -222,6 +225,7 @@ class JobCommonService:
         for index, train_file in enumerate(update_file_dict[code_platform][0]):
             target_file = temp_dir + train_file
             if not os.path.exists(target_file):
+                logger.warning(f"{target_file} does not exists")
                 raise CodeNotCompliantException()
             print(f"reading {target_file}")
 
@@ -233,7 +237,6 @@ class JobCommonService:
 
             print(f"visit file  {target_file} success")
             ast.fix_missing_locations(ast_root)
-
 
             sorted_code_list = sorted(
                 update_file_dict[code_platform][1][index],
@@ -248,11 +251,11 @@ class JobCommonService:
                         f"offset : {elem.col_offset}"
                     )
                     if elem.operation == InjectionOperation.ADD:
-                        #if insert in lastest line, must confirm there exits \n character after last line
+                        # if insert in lastest line, must confirm there exits \n character after last line
                         if elem.insert_expr[-1] != '\n':
-                            #print(f'elem.insert_line_no : {elem.insert_line_no}, elem.insert_expr: {elem.insert_expr}')
-                            #lines.insert(elem.insert_line_no, "\n")
-                            lines[elem.insert_line_no -1] += '\n'
+                            # print(f'elem.insert_line_no : {elem.insert_line_no}, elem.insert_expr: {elem.insert_expr}')
+                            # lines.insert(elem.insert_line_no, "\n")
+                            lines[elem.insert_line_no - 1] += '\n'
                         lines.insert(
                             elem.insert_line_no,
                             " " * elem.col_offset + elem.insert_expr + "\n",
@@ -273,7 +276,6 @@ class JobCommonService:
 
         return
 
-
     def handle_ipynb(self, temp_dir):
         for root, dirs, files in os.walk(temp_dir):
             for file in files:
@@ -286,7 +288,7 @@ class JobCommonService:
                             if cell["cell_type"] == "code":
                                 for line in cell["source"]:
                                     if line.lstrip().startswith(
-                                        "!"
+                                            "!"
                                     ) or line.lstrip().startswith("！"):
                                         continue
                                     py_file.write(line)
@@ -294,14 +296,13 @@ class JobCommonService:
                     os.system(f"rm {path}")
 
     def check(self, event):
-        self.payload_check(event)
 
-        if not event["payload"].get("code_file"):
+        if not event.get("code_file"):
             raise ResourceNotFoundException(
-                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("payload.code_file")
+                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("code_file")
             )
 
-        result = re.search(Regex.S3_CODE_FILE_URI, event["payload"]["code_file"])
+        result = re.search(Regex.S3_CODE_FILE_URI, event["code_file"])
         if result is None:
             raise ResourceNotFoundException(msg.S3_CODE_URI_ERROR)
 
@@ -357,7 +358,7 @@ class JobCommonService:
                     print(
                         f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_key}"
                     )
-                    #aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+                    # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             elif s3_key.endswith(".zip"):
                 with tempfile.TemporaryFile(suffix=".zip") as f:
                     with zipfile.ZipFile(f, "w") as zip_file:
@@ -372,8 +373,9 @@ class JobCommonService:
                                 )
                     f.flush()
                     f.seek(0)
-                    #aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
-        #upload origin package with another
+                    # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+
+        # upload origin package with another
         s3_key_list = s3_key.split('/')
         filename_list = s3_key_list[1].split('.')
         filename_list[0] = filename_list[0] + '_origin_package'
@@ -384,7 +386,7 @@ class JobCommonService:
             logger.info(
                 f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_origin_package_key}"
             )
-            #aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
+            # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
 
         try:
             self.insert_code(code_platform, temp_dir)
@@ -420,9 +422,6 @@ class JobCommonService:
             "structure": code_structure_do.structure,
         }
 
-
-
-
     """
     Handle api request
     """
@@ -430,27 +429,15 @@ class JobCommonService:
     def api_gateway(self, event, context) -> Ret:
         try:
             logger.debug(event)
-            if "action" not in event or self.action(event["action"]) is None:
-                return Ret.fail(
-                    msg=msg.API_ACTION_NOT_FOUND, code=HttpCode.HTTP_NOT_FOUND
-                )
-
-            if "payload" in event:
-                # store uid value with specific key
-                userid_keys = ["createdBy", "uid"]
-                for userid_key in userid_keys:
-                    if userid_key in event["payload"]:
-                        event["payload"]["uid"] = event["payload"][userid_key]
-                        break
 
             return Ret.ok(
                 data=self.check(event), code=HttpCode.HTTP_OK
             )
         except (
-            ResourceNotFoundException,
-            AwsServiceOperationException,
-            StatusCheckFailedException,
-            Exception,
+                ResourceNotFoundException,
+                AwsServiceOperationException,
+                StatusCheckFailedException,
+                Exception,
         ) as e:
             logger.exception(e)
             return Ret.fail(
@@ -466,8 +453,11 @@ handle
 jobCommonService = JobCommonService()
 
 
+def handle(event, context):
+    return todict(jobCommonService.api_gateway(event, context))
 
-if __name__ ==  '__main__':
+
+if __name__ == '__main__':
     service = JobCommonService()
     payload = {
 
