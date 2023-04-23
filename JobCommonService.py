@@ -263,8 +263,10 @@ class JobCommonService:
                     elif elem.operation == InjectionOperation.DELETE:
                         del lines[elem.insert_line_no - 1]
                 s = "".join(lines)
-            with open(target_file, "w") as f:
-                f.write(s)
+
+            if os.environ['MODE'] != "test":
+                with open(target_file, "w") as f:
+                    f.write(s)
 
         for item in visited_table.values():
             if not item[0]:
@@ -400,6 +402,16 @@ class JobCommonService:
             raise e
 
         code_checker = CodeChecker()
+        self.validate_netmind_interface(code_checker, code_platform, temp_dir)
+        shutil.rmtree(temp_dir)
+        return {
+            "warn": code_checker.warn,
+            "error": code_checker.error,
+            "structure": code_structure_do.structure,
+        }
+
+    def validate_netmind_interface(self, code_checker, code_platform, code_path):
+
         code_checker_dict = {
             CodePlatform.PYTORCH_CUSTOM_TRAINER: code_checker.pytorch_custom_trainer_do_check,
             CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL: code_checker.pytorch_custom_witheval_trainer_do_check,
@@ -413,14 +425,10 @@ class JobCommonService:
         if code_platform not in code_checker_dict.keys():
             raise ValueError(f"code_platform : {code_platform} not recognized")
         logger.info(f"code_platform : {code_platform}")
-        code_checker_dict[code_platform](temp_dir, code_platform)
+        code_checker_dict[code_platform](code_path, code_platform)
 
-        shutil.rmtree(temp_dir)
-        return {
-            "warn": code_checker.warn,
-            "error": code_checker.error,
-            "structure": code_structure_do.structure,
-        }
+
+
 
     """
     Handle api request
