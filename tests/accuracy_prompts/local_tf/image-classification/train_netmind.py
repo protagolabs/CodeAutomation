@@ -105,21 +105,11 @@ if __name__ == '__main__':
 
     all_callbacks = [tensorboard_callback, model_callback]
 
-
-    netmind_callback = CustomTrainerCallback(batches_per_epoch=batches_per_epoch)
     history = model.fit(
         train_data_iterator,
         validation_data=test_data_iterator if hasattr(args, "do_eval") and args.do_eval else None,
         steps_per_epoch=train_num // global_batch_size,
         validation_steps=test_num // global_batch_size if hasattr(args, "do_eval") and args.do_eval else None,
         epochs=args.num_train_epochs,
-        callbacks = all_callbacks
+        callbacks=all_callbacks
     )
-
-
-
-
-
-
-
-

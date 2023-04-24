@@ -1,4 +1,7 @@
 from NetmindMixins.Netmind import nmp
+from NetmindMixins.Netmind import nmp
+from NetmindMixins.Netmind import nmp
+from NetmindMixins.Netmind import nmp
 import transformers
 import torch
 from tqdm import tqdm
@@ -31,6 +34,12 @@ def main(args):
     
     # Prepare optimizer
     optimizer = get_optimizer(model,args)    
+
+    nmp.init()
+
+    nmp.init()
+
+    nmp.init()
     nmp.init()
     # start train
     train(tokenizer, data_collator, dataset, model, optimizer, args)
@@ -49,3 +58,6 @@ if __name__ == '__main__':
         import traceback
         traceback.print_exc()
         exit(1)
+
+
+
