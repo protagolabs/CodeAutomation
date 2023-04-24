@@ -78,12 +78,14 @@ from auto_complete.hivemind_resnet_handler import (
 from auto_complete.tensorflow_custom import (
     TensorflowCustomHandler,
     tf_custom_code_injection_list,
-    tensorflow_custom_visited_table
+    tensorflow_custom_visited_table,
+    init_custom_tf_injection_list
 )
 from auto_complete.tensorflow_trainer import (
     TensorflowTrainerHandler,
     tf_trainer_code_injection_list,
-    tensorflow_trainer_visited_table
+    tensorflow_trainer_visited_table,
+    init_callback_tf_injection_list
 )
 from auto_complete.tool import (
     CodeNotCompliantException,
@@ -96,20 +98,23 @@ from auto_complete.torch_custom_with_eval import (
     TorchCustomWithEvalTrainerHandler,
     torch_cus_eval_dist_code_injection_list,
     torch_cus_eval_trainer_code_injection_list,
-    pytorch_resnet_custom_visited_table
+    pytorch_resnet_custom_visited_table,
+    init_custom_with_eval_injection_list
 )
 from auto_complete.torch_custom_without_eval import (
     TorchCustomWithOutEvalTrainDistHandler,
     TorchCustomWithOutEvalTrainerHandler,
     torch_no_eval_dist_code_injection_list,
     torch_no_eval_trainer_code_injection_list,
-    pytorch_mlm_custom_visited_table
+    pytorch_mlm_custom_visited_table,
+    init_custom_without_eval_injection_list
 )
 from auto_complete.torch_trainer import (
     TorchTrainerHandler,
     torch_trainer_dist_code_injection_list,
     torch_trainer_trainer_code_injection_list,
-    pytorch_trainer_visited_table
+    pytorch_trainer_visited_table,
+    init_transformers_injection_list
 )
 from CodeChecker import CodeChecker
 from PlatformChecker import (
@@ -146,13 +151,15 @@ class JobCommonService:
                 ["train_netmind.py"],
                 [tf_custom_code_injection_list],
                 TensorflowCustomHandler,
-                tensorflow_custom_visited_table
+                tensorflow_custom_visited_table,
+                init_custom_tf_injection_list,
             ),
             CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER: (
                 ["train_netmind.py"],
                 [tf_trainer_code_injection_list],
                 TensorflowTrainerHandler,
-                tensorflow_trainer_visited_table
+                tensorflow_trainer_visited_table,
+                init_callback_tf_injection_list,
             ),
             CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL: (
                 ["train_dist.py", "trainer.py"],
@@ -164,7 +171,8 @@ class JobCommonService:
                     TorchCustomWithEvalTrainDistHandler,
                     TorchCustomWithEvalTrainerHandler,
                 ],
-                pytorch_resnet_custom_visited_table
+                pytorch_resnet_custom_visited_table,
+                init_custom_with_eval_injection_list
             ),
             CodePlatform.PYTORCH_CUSTOM_TRAINER: (
                 ["train_dist.py", "trainer.py"],
@@ -176,7 +184,8 @@ class JobCommonService:
                     TorchCustomWithOutEvalTrainDistHandler,
                     TorchCustomWithOutEvalTrainerHandler,
                 ],
-                pytorch_mlm_custom_visited_table
+                pytorch_mlm_custom_visited_table,
+                init_custom_without_eval_injection_list
             ),
             CodePlatform.PYTORCH_TRANSFORMERS_TRAINER: (
                 ["train_dist.py", "trainer.py"],
@@ -185,7 +194,8 @@ class JobCommonService:
                     torch_trainer_trainer_code_injection_list,
                 ],
                 TorchTrainerHandler,
-                pytorch_trainer_visited_table
+                pytorch_trainer_visited_table,
+                init_transformers_injection_list
             ),
 
             CodePlatform.HIVEMIND_CUSTOM_TRAINER: (
@@ -222,21 +232,27 @@ class JobCommonService:
         for value in visited_table.values():
             value[0] = False
 
+        #for meta_list in update_file_dict[code_platform][1]:
+        #    meta_list
+        update_file_dict[code_platform][4]()
         for index, train_file in enumerate(update_file_dict[code_platform][0]):
             target_file = temp_dir + train_file
             if not os.path.exists(target_file):
                 logger.warning(f"{target_file} does not exists")
-                raise CodeNotCompliantException()
-            print(f"reading {target_file}")
+                raise CodeNotCompliantException(f"{target_file} does not exists")
+            logger.info(f"reading {target_file}")
 
             ast_root = ast.parse(open(target_file).read())
+
+            print(f'meta list : {update_file_dict[code_platform][1][index]}')
             if isinstance(update_file_dict[code_platform][2], list):
                 update_file_dict[code_platform][2][index]().visit(ast_root)
             else:
                 update_file_dict[code_platform][2]().visit(ast_root)
 
-            print(f"visit file  {target_file} success")
+            logger.info(f"visit file  {target_file} success")
             ast.fix_missing_locations(ast_root)
+
 
             sorted_code_list = sorted(
                 update_file_dict[code_platform][1][index],
@@ -246,7 +262,7 @@ class JobCommonService:
             with open(target_file, "r") as f:
                 lines = f.readlines()
                 for elem in sorted_code_list:
-                    print(
+                    logger.info(
                         f"insert {target_file}, line : {elem.insert_line_no}, content : {elem.insert_expr} "
                         f"offset : {elem.col_offset}"
                     )
@@ -264,10 +280,10 @@ class JobCommonService:
                         del lines[elem.insert_line_no - 1]
                 s = "".join(lines)
 
-            if os.environ['MODE'] != "test":
-                with open(target_file, "w") as f:
-                    f.write(s)
+            with open(target_file, "w") as f:
+                f.write(s)
 
+        logger.debug(f'visited_table.values() : {visited_table.values()}')
         for item in visited_table.values():
             if not item[0]:
                 if item[1] not in missing_feature_point_list:
@@ -391,6 +407,7 @@ class JobCommonService:
             # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
 
         try:
+
             self.insert_code(code_platform, temp_dir)
             _compress_tar(origin_dir)
         except DuplicateInjectionError:

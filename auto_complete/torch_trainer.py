@@ -7,8 +7,11 @@ from auto_complete.tool import *
 torch_trainer_dist_code_injection_list = []
 torch_trainer_trainer_code_injection_list = []
 
-torch_trainer_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
-torch_trainer_trainer_code_injection_list.append(CodeInjectionData(0, trainer_import_expr, 0))
+def init_transformers_injection_list():
+    torch_trainer_dist_code_injection_list.clear()
+    torch_trainer_trainer_code_injection_list.clear()
+    torch_trainer_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
+    torch_trainer_trainer_code_injection_list.append(CodeInjectionData(0, trainer_import_expr, 0))
 
 
 class TorchTrainerHandler(ast.NodeVisitor):

@@ -261,8 +261,9 @@ class CodeChecker(AstChecker):
         nmp_should_skip_step = CheckPoint(
             [ast.Call],
             Level.WARN,
+            "NetmindMixins.Netmind.nmp.should_skip_step",
             "whther skip this batch",
-            "",
+
         )
         nmp_step = CheckPoint(
             [ast.Call],

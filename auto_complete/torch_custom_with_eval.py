@@ -7,9 +7,11 @@ torch_cus_eval_dist_code_injection_list = []
 torch_cus_eval_trainer_code_injection_list = []
 
 
-
-torch_cus_eval_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
-torch_cus_eval_trainer_code_injection_list.append(CodeInjectionData(0, nmp_import_expr, 0))
+def init_custom_with_eval_injection_list():
+    torch_cus_eval_dist_code_injection_list.clear()
+    torch_cus_eval_trainer_code_injection_list.clear()
+    torch_cus_eval_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
+    torch_cus_eval_trainer_code_injection_list.append(CodeInjectionData(0, nmp_import_expr, 0))
 
 
 

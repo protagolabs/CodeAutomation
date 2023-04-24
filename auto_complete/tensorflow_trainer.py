@@ -6,7 +6,9 @@ from auto_complete.tool import *
 
 tf_trainer_code_injection_list = []
 
-tf_trainer_code_injection_list.append(CodeInjectionData(0, import_insert_line_expr, 0))
+def init_callback_tf_injection_list():
+    tf_trainer_code_injection_list.clear()
+    tf_trainer_code_injection_list.append(CodeInjectionData(0, import_insert_line_expr, 0))
 
 
 class TensorflowTrainerHandler(NodeVisitor):
@@ -37,6 +39,7 @@ class TensorflowTrainerHandler(NodeVisitor):
             class_injection = CodeInjectionData(node.lineno, callback_insert_expr, node.col_offset)
             tf_trainer_code_injection_list.append(class_injection)
             tensorflow_trainer_visited_table[callback_insert_expr][0] = True
+            print(f'*'*50)
         self.generic_visit(node)
 
 

@@ -8,7 +8,7 @@ from auto_complete.tool import (
     DuplicateInjectionError
 )
 
-os.environ['MODE'] = "test"
+os.environ['MODE'] = "copy_before_write"
 
 @pytest.fixture
 def platform_checker():
@@ -148,11 +148,9 @@ def test_do_check_netmind_torch_language_callback(platform_checker: PlatformChec
         print("duplicate injection is forbidded")
 
         jobCommonService.validate_netmind_interface(code_checker, platform, directory)
-        invalid_netmind_api_dict = {
-            "warn": code_checker.warn,
-            "error": code_checker.error,
-        }
-        print(f'invalid_netmind_api_dict : {invalid_netmind_api_dict}')
+
+        assert code_checker.warn == []
+        assert code_checker.error == []
 
 def test_do_check_netmind_torch_language_custom(platform_checker: PlatformChecker,
                                                   code_checker: CodeChecker):
@@ -168,11 +166,8 @@ def test_do_check_netmind_torch_language_custom(platform_checker: PlatformChecke
         print(f'path : {os.getcwd()}')
 
         jobCommonService.validate_netmind_interface(code_checker, platform, directory)
-        invalid_netmind_api_dict = {
-            "warn": code_checker.warn,
-            "error": code_checker.error,
-        }
-        print(f'invalid_netmind_api_dict : {invalid_netmind_api_dict}')
+        assert code_checker.warn == []
+        assert code_checker.error == []
 
 
 
@@ -180,9 +175,8 @@ def test_do_check_netmind_torch_image_custom(platform_checker: PlatformChecker):
     directory = "tests/accuracy_prompts/netmind_torch/resnet/"
     try:
         platform = platform_checker.check_from_dir(directory)
-
+        assert platform == CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL
     except Exception as e:
-        print(f'---, {e.args[0]}')
         assert "missing file" in e.args[0]
         assert "optimizer.py" in e.args[0]
         assert "arguments.py" in e.args[0]

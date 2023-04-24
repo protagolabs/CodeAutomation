@@ -4,9 +4,9 @@ from auto_complete.tool import *
 import  ast
 
 tf_custom_code_injection_list = []
-
-
-tf_custom_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
+def init_custom_tf_injection_list():
+    tf_custom_code_injection_list.clear()
+    tf_custom_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
 
 
 
@@ -139,7 +139,7 @@ class TensorflowCustomHandler(NodeVisitor):
                 ('id', str),
             ]
             assign_attr_name = get_attr_recursively(node, id_tuple_list)
-            if assign_attr_name != 'val_data_iterator':
+            if assign_attr_name != 'test_data_iterator':
                 self.generic_visit(node)
                 return node
 

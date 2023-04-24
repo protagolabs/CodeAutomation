@@ -7,9 +7,11 @@ torch_no_eval_dist_code_injection_list = []
 torch_no_eval_trainer_code_injection_list = []
 
 
-
-torch_no_eval_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
-torch_no_eval_trainer_code_injection_list.append(CodeInjectionData(0, nmp_import_expr, 0))
+def init_custom_without_eval_injection_list():
+    torch_no_eval_dist_code_injection_list.clear()
+    torch_no_eval_trainer_code_injection_list.clear()
+    torch_no_eval_dist_code_injection_list.append(CodeInjectionData(0, import_expr, 0))
+    torch_no_eval_trainer_code_injection_list.append(CodeInjectionData(0, nmp_import_expr, 0))
 
 
 class TorchCustomWithOutEvalTrainDistHandler(ast.NodeVisitor):

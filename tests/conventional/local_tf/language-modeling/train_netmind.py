@@ -11,8 +11,6 @@ from arguments import setup_args
 args = setup_args()
 
 logger = logging.getLogger(__name__)
-
-
 class CustomTrainerCallback(tf.keras.callbacks.Callback):
     # Hugging Face models have a save_pretrained() method that saves both the weights and the necessary
     # metadata to allow them to be loaded as a pretrained model in future. This is a simple Keras callback
