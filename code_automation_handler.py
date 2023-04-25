@@ -117,7 +117,7 @@ from auto_complete.torch_trainer import (
     init_transformers_injection_list
 )
 from template_checker import CodeChecker
-from PlatformChecker import (
+from template_platform import (
     CodePlatform,
     PlatformChecker,
 )

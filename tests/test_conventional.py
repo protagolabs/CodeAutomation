@@ -3,7 +3,7 @@ import os
 import uuid
 import  shutil
 from template_checker import CodeChecker
-from PlatformChecker import CodePlatform, PlatformChecker
+from template_platform import CodePlatform, PlatformChecker
 from code_automation_handler import code_automation_handler
 
 
