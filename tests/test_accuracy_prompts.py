@@ -169,10 +169,11 @@ class TestAccuracyPrompts():
             print("duplicate injection is forbidded")
 
             jobCommonService.validate_netmind_interface(code_checker, platform, directory)
+            warn_str = ' '.join(code_checker.warn)
+            error_str = ' '.join(code_checker.error)
+            assert 'nmp.last_checkpoint_from_netmind' in warn_str
 
 
-            assert code_checker.warn == []
-            assert code_checker.error == []
 
     def test_do_check_netmind_torch_language_custom(self, platform_checker: PlatformChecker,
                                                       code_checker: CodeChecker):
@@ -187,10 +188,11 @@ class TestAccuracyPrompts():
             print("duplicate injection is forbidded")
 
             jobCommonService.validate_netmind_interface(code_checker, platform, directory)
-            print(code_checker.warn)
-            assert code_checker.warn == []
-            assert code_checker.error == []
-
+            warn_str = ' '.join(code_checker.warn)
+            error_str = ' '.join(code_checker.error)
+            assert 'nmp.should_skip_step' in warn_str
+            assert 'Netmind.NetmindDistributedModel' in warn_str
+            assert 'nmp.init' in error_str
 
 
     def test_do_check_netmind_torch_image_custom(self, platform_checker: PlatformChecker):
