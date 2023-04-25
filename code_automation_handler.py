@@ -116,7 +116,7 @@ from auto_complete.torch_trainer import (
     pytorch_trainer_visited_table,
     init_transformers_injection_list
 )
-from CodeChecker import CodeChecker
+from template_checker import CodeChecker
 from PlatformChecker import (
     CodePlatform,
     PlatformChecker,

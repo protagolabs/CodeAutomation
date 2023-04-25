@@ -2,7 +2,7 @@ import pytest
 import os
 import uuid
 import  shutil
-from CodeChecker import CodeChecker
+from template_checker import CodeChecker
 from PlatformChecker import CodePlatform, PlatformChecker
 from code_automation_handler import code_automation_handler
 
