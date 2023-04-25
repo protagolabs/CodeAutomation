@@ -16,9 +16,11 @@ def init_custom_with_eval_injection_list():
 
 
 class TorchCustomWithEvalTrainDistHandler(ast.NodeVisitor):
-    outer_loop_visited = False
-    model_name = None
-    dataloader_name = None
+
+    def __init__(self):
+        TorchCustomWithEvalTrainDistHandler.outer_loop_visited = False
+        TorchCustomWithEvalTrainDistHandler.model_name = None
+        TorchCustomWithEvalTrainDistHandler.dataloader_name = None
 
     def visit_ImportFrom(self, node: ImportFrom):
 
@@ -86,7 +88,7 @@ class TorchCustomWithEvalTrainDistHandler(ast.NodeVisitor):
                 ]
                 TorchCustomWithEvalTrainDistHandler.model_name = get_attr_recursively(node, attr_tuple_list)
             elif attr_name == 'DataLoader':
-                if not TorchCustomWithEvalTrainDistHandler.dataloader_name :
+                if not TorchCustomWithEvalTrainDistHandler.dataloader_name:
                     attr_name = get_single_return_value_name(node)
                     TorchCustomWithEvalTrainDistHandler.dataloader_name = attr_name
 
@@ -121,10 +123,11 @@ class TorchCustomWithEvalTrainDistHandler(ast.NodeVisitor):
         self.generic_visit(node)
 
 class TorchCustomWithEvalTrainerHandler(ast.NodeVisitor):
-    train_func_visited = False
-    train_func_visited_finished = False
-    outer_loop_visited = False
-    for_loop_finished = False
+    def __init__(self):
+        TorchCustomWithEvalTrainerHandler.train_func_visited = False
+        TorchCustomWithEvalTrainerHandler.train_func_visited_finished = False
+        TorchCustomWithEvalTrainerHandler.outer_loop_visited = False
+        TorchCustomWithEvalTrainerHandler.for_loop_finished = False
 
     def visit_ImportFrom(self, node: ImportFrom):
 

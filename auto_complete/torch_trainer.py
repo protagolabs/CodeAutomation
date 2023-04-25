@@ -15,9 +15,9 @@ def init_transformers_injection_list():
 
 
 class TorchTrainerHandler(ast.NodeVisitor):
-
-    optimizer_visited = False
-    endline_no =  None
+    def __init__(self):
+        TorchTrainerHandler.optimizer_visited = False
+        TorchTrainerHandler.endline_no =  None
 
     def visit_FunctionDef(self, node: FunctionDef):
         attr_tuple_list = [

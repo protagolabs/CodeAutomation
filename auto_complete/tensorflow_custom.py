@@ -12,16 +12,16 @@ def init_custom_tf_injection_list():
 
 class TensorflowCustomHandler(NodeVisitor):
 
-    out_loop_visited = False
-    inner_loop_train_visited = False
-    inner_loop_val_visited = False
+    def __init__(self):
+        TensorflowCustomHandler.out_loop_visited = False
+        TensorflowCustomHandler.inner_loop_train_visited = False
+        TensorflowCustomHandler.inner_loop_val_visited = False
 
-    visit_if_key_list = [finish_training_expr]
-    visit_assign_key_list = [nmp_init_expr]
-    visit_for_key_list = [model_distibuted_expr, init_train_bar_expr,
-                         init_eval_bar_expr, should_skip_expr,
-                         step_expr, evaluate_expr]
-
+        TensorflowCustomHandler.visit_if_key_list = [finish_training_expr]
+        TensorflowCustomHandler.visit_assign_key_list = [nmp_init_expr]
+        TensorflowCustomHandler.visit_for_key_list = [model_distibuted_expr, init_train_bar_expr,
+                             init_eval_bar_expr, should_skip_expr,
+                             step_expr, evaluate_expr]
 
 
     def visit_ImportFrom(self, node: ImportFrom):

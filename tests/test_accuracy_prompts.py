@@ -4,7 +4,7 @@ import  uuid
 import  shutil
 from CodeChecker import CodeChecker
 from PlatformChecker import CodePlatform, PlatformChecker
-from JobCommonService import jobCommonService
+from code_automation_handler import code_automation_handler
 from auto_complete.tool import (
     CodeNotCompliantException,
     DuplicateInjectionError
@@ -35,7 +35,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
 
             assert "CustomTrainerCallback(tf.keras.callbacks.Callback)" in e.args[0]
@@ -49,7 +49,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.TENSORFLOW_CUSTOM_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
 
             print("---", e.args[0])
@@ -65,7 +65,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
 
             print("---", e.args[0])
@@ -81,7 +81,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.PYTORCH_TRANSFORMERS_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
 
             print("---", e.args[0])
@@ -96,7 +96,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.PYTORCH_CUSTOM_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
             print("---", e.args[0])
             assert "DistributedSampler" in e.args[0]
@@ -112,7 +112,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
             assert "__main__" in e.args[0]
             assert "validate" in e.args[0]
@@ -128,7 +128,7 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
             assert "duplicate injection" in e.args[0]
 
@@ -150,7 +150,7 @@ class TestAccuracyPrompts():
         try:
             platform = platform_checker.check_from_dir(directory)
             assert platform == CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
             assert "duplicate injection" in e.args[0]
 
@@ -164,11 +164,11 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.PYTORCH_TRANSFORMERS_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except DuplicateInjectionError:
             print("duplicate injection is forbidded")
 
-            jobCommonService.validate_netmind_interface(code_checker, platform, directory)
+            code_automation_handler.validate_netmind_interface(code_checker, platform, directory)
             warn_str = ' '.join(code_checker.warn)
             error_str = ' '.join(code_checker.error)
             assert 'nmp.last_checkpoint_from_netmind' in warn_str
@@ -183,11 +183,11 @@ class TestAccuracyPrompts():
         assert platform == CodePlatform.PYTORCH_CUSTOM_TRAINER
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except DuplicateInjectionError:
             print("duplicate injection is forbidded")
 
-            jobCommonService.validate_netmind_interface(code_checker, platform, directory)
+            code_automation_handler.validate_netmind_interface(code_checker, platform, directory)
             warn_str = ' '.join(code_checker.warn)
             error_str = ' '.join(code_checker.error)
             assert 'nmp.should_skip_step' in warn_str

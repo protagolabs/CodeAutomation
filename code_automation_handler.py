@@ -125,7 +125,7 @@ from PlatformChecker import (
 logger = get_logger(__name__)
 
 
-class JobCommonService:
+class CodeAutomationHandler:
     def payload_check(self, event):
         if "payload" not in event:
             raise ResourceNotFoundException(
@@ -286,13 +286,15 @@ class JobCommonService:
             with open(k, "w") as f:
                 f.write(v)
 
-        logger.debug(f'visited_table.values() : {visited_table.values()}')
+        logger.info(f'visited_table.values() : {visited_table.values()}')
         for item in visited_table.values():
             if not item[0]:
                 if item[1] not in missing_feature_point_list:
                     missing_feature_point_list.append(item[1])
         if len(missing_feature_point_list) > 0:
             str_missing_feature_point = '\n'.join(missing_feature_point_list)
+
+            logger.error(f'error str_missing_feature_point:{str_missing_feature_point}')
             raise CodeTemplateNotLegalException(f'missing \n {str_missing_feature_point}')
 
         return
@@ -478,15 +480,15 @@ class JobCommonService:
 handle
 """
 
-jobCommonService = JobCommonService()
+code_automation_handler = CodeAutomationHandler()
 
 
 def handle(event, context):
-    return todict(jobCommonService.api_gateway(event, context))
+    return todict(code_automation_handler.api_gateway(event, context))
 
 
 if __name__ == '__main__':
-    service = JobCommonService()
+    service = CodeAutomationHandler()
     payload = {
 
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"

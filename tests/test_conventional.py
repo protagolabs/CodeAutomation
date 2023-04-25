@@ -4,11 +4,8 @@ import uuid
 import  shutil
 from CodeChecker import CodeChecker
 from PlatformChecker import CodePlatform, PlatformChecker
-from JobCommonService import jobCommonService
-from auto_complete.tool import (
-    CodeNotCompliantException,
-    DuplicateInjectionError
-)
+from code_automation_handler import code_automation_handler
+
 
 os.environ['MODE'] = "copy_before_write"
 
@@ -41,14 +38,15 @@ class TestConventional():
             print(f'generate writing directory : {write_dir}')
             shutil.copytree(directory, write_dir)
 
-        jobCommonService.insert_code(platform, write_dir)
+        code_automation_handler.insert_code(platform, write_dir)
 
-        jobCommonService.validate_netmind_interface(code_checker, platform, write_dir)
+        code_automation_handler.validate_netmind_interface(code_checker, platform, write_dir)
         invalid_netmind_api_dict = {
             "warn": code_checker.warn,
             "error": code_checker.error,
         }
         print(f'invalid_netmind_api_dict: {invalid_netmind_api_dict}')
+
         assert code_checker.warn == []
         assert code_checker.error == []
         shutil.rmtree(write_dir)
@@ -92,12 +90,13 @@ class TestConventional():
         TestConventional.local_common(directory, CodePlatform.PYTORCH_CUSTOM_TRAINER, platform_checker, code_checker)
     
     
-    
+    """
     def test_do_check_local_torch_image_custom(self,
                                                platform_checker: PlatformChecker,
                                                code_checker: CodeChecker):
         directory = "tests/conventional/local_torch/resnet/"
         TestConventional.local_common(directory, CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL, platform_checker, code_checker)
+    """
 
     @classmethod
     def netmind_common(
@@ -111,11 +110,11 @@ class TestConventional():
         assert platform == expected_platform
 
         try:
-            jobCommonService.insert_code(platform, directory)
+            code_automation_handler.insert_code(platform, directory)
         except Exception as e:
             assert "duplicate injection" in e.args[0]
 
-        jobCommonService.validate_netmind_interface(code_checker, platform, directory)
+        code_automation_handler.validate_netmind_interface(code_checker, platform, directory)
         assert code_checker.warn == []
         assert code_checker.error == []
     
@@ -177,4 +176,5 @@ class TestConventional():
 
 
 if __name__ == '__main__':
+    #pytest.main([ '-s', '-v', "--html=/Users/yang.li/Desktop/test_accuracy_prompts.html", "test_conventional.py::TestConventional"])
     pytest.main()

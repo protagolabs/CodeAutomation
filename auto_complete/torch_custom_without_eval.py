@@ -15,10 +15,16 @@ def init_custom_without_eval_injection_list():
 
 
 class TorchCustomWithOutEvalTrainDistHandler(ast.NodeVisitor):
-    outer_loop_visited = False
-    end_if_block_last_line = -1
-    model_name = None
-    dataloader_name = None
+    #outer_loop_visited = False
+    #end_if_block_last_line = -1
+    #model_name = None
+    #dataloader_name = None
+
+    def __init__(self):
+        TorchCustomWithOutEvalTrainDistHandler.outer_loop_visited = False
+        TorchCustomWithOutEvalTrainDistHandler.end_if_block_last_line = -1
+        TorchCustomWithOutEvalTrainDistHandler.model_name = None
+        TorchCustomWithOutEvalTrainDistHandler.dataloader_name = None
 
     def visit_ImportFrom(self, node: ImportFrom):
         attr_tuple_list = [
@@ -112,8 +118,12 @@ class TorchCustomWithOutEvalTrainDistHandler(ast.NodeVisitor):
 
 
 class TorchCustomWithOutEvalTrainerHandler(ast.NodeVisitor):
-    outer_loop_visited = False
-    end_if_block_last_line = -1
+    #outer_loop_visited = False
+    #end_if_block_last_line = -1
+
+    def __init__(self):
+        TorchCustomWithOutEvalTrainerHandler.outer_loop_visited = False
+        TorchCustomWithOutEvalTrainerHandler.end_if_block_last_line = -1
 
     def visit_ImportFrom(self, node: ImportFrom):
         attr_tuple_list = [
@@ -126,7 +136,6 @@ class TorchCustomWithOutEvalTrainerHandler(ast.NodeVisitor):
 
 
     def visit_For(self, node: For):
-
         if not TorchCustomWithOutEvalTrainerHandler.outer_loop_visited:
             outloop_deletion = CodeInjectionData(node.lineno, None, None, InjectionOperation.DELETE)
             torch_no_eval_trainer_code_injection_list.append(outloop_deletion)

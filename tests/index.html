@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>index.html</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    let visibleString = getQueryParameter('visible') || 'all';
+    visibleString = visibleString.toLowerCase();
+    const checkedItems = visibleString.split(',');
+
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++) {
+        filterItems[i].hidden = false;
+
+        if (visibleString != 'all') {
+            filterItems[i].checked = checkedItems.includes(filterItems[i].getAttribute('data-test-result'));
+            filterTable(filterItems[i]);
+        }
+    }
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>index.html</h1>
+    <p>Report generated on 25-Apr-2023 at 15:28:32 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.2.0</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "1.0.0", "pytest": "7.1.2"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>macOS-10.16-x86_64-i386-64bit</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"cov": "4.0.0", "html": "3.2.0", "metadata": "2.0.4", "web3": "6.0.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.8.16</td></tr></table>
+    <h2>Summary</h2>
+    <p>12 tests ran in 2.50 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">0 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">12 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_tf_image_classification_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7faf92387fa0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2ab0c40&gt;<br/><br/>    def test_do_check_local_tf_image_classification_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/local_tf/image-classification/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:33: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_tf/image-classification/&#x27;, dst = &#x27;/tmp/c94849a7-9f20-48d3-be8d-74040b560722/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_tf/image-classification/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/c94849a7-9f20-48d3-be8d-74040b560722/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_tf_image_classification_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab00a0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2ad4520&gt;<br/><br/>    def test_do_check_local_tf_image_classification_custom(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/local_tf/image-classification-custom/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:47: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_tf/image-classification-custom/&#x27;, dst = &#x27;/tmp/8b038ac9-0f0c-4153-97f3-6507f492e751/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_tf/image-classification-custom/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/8b038ac9-0f0c-4153-97f3-6507f492e751/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_tf_language_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab01c0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2ad4c70&gt;<br/><br/>    def test_do_check_local_tf_language_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/local_tf/language-modeling/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:63: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_tf/language-modeling/&#x27;, dst = &#x27;/tmp/49725f90-51a3-4aef-a1b4-88425bfd7251/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_tf/language-modeling/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/49725f90-51a3-4aef-a1b4-88425bfd7251/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_torch_language_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab02e0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2ab0a90&gt;<br/><br/>    def test_do_check_local_torch_language_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/local_torch/mlm_trainer_Huggince/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:79: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_torch/mlm_trainer_Huggince/&#x27;, dst = &#x27;/tmp/f270b4c8-609d-4573-93e5-26b28fc851c4/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_torch/mlm_trainer_Huggince/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/f270b4c8-609d-4573-93e5-26b28fc851c4/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_torch_language_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0400&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923c7970&gt;<br/><br/>    def test_do_check_local_torch_language_custom(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/local_torch/mlm_trainer_customer/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:94: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_torch/mlm_trainer_customer/&#x27;, dst = &#x27;/tmp/1984734d-ed1c-41f5-9aa9-39a021f32f6e/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_torch/mlm_trainer_customer/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/1984734d-ed1c-41f5-9aa9-39a021f32f6e/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_local_torch_image_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0520&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923c71f0&gt;<br/><br/>    def test_do_check_local_torch_image_custom(self, platform_checker: PlatformChecker):<br/>        directory = &quot;tests/accuracy_prompts/local_torch/resnet/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:110: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/local_torch/resnet/&#x27;, dst = &#x27;/tmp/8181e898-480d-4681-b7fc-99d42ecf5a30/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/local_torch/resnet/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/8181e898-480d-4681-b7fc-99d42ecf5a30/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_tf_image_classification_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0670&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923c75e0&gt;<br/><br/>    def test_do_check_netmind_tf_image_classification_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_tf/image-classification/&quot;<br/>&gt;       directory = generate_new_dir(directory)<br/><br/>test_accuracy_prompts.py:126: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>test_accuracy_prompts.py:26: in generate_new_dir<br/>    shutil.copytree(directory, write_dir)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>src = &#x27;tests/accuracy_prompts/netmind_tf/image-classification/&#x27;, dst = &#x27;/tmp/0a4471d6-5604-4563-9dac-c30b62b018b8/&#x27;, symlinks = False, ignore = None<br/>copy_function = &lt;function copy2 at 0x7faf8005da60&gt;, ignore_dangling_symlinks = False, dirs_exist_ok = False<br/><br/>    def copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2,<br/>                 ignore_dangling_symlinks=False, dirs_exist_ok=False):<br/>        &quot;&quot;&quot;Recursively copy a directory tree and return the destination directory.<br/>    <br/>        dirs_exist_ok dictates whether to raise an exception in case dst or any<br/>        missing parent directory already exists.<br/>    <br/>        If exception(s) occur, an Error is raised with a list of reasons.<br/>    <br/>        If the optional symlinks flag is true, symbolic links in the<br/>        source tree result in symbolic links in the destination tree; if<br/>        it is false, the contents of the files pointed to by symbolic<br/>        links are copied. If the file pointed by the symlink doesn&#x27;t<br/>        exist, an exception will be added in the list of errors raised in<br/>        an Error exception at the end of the copy process.<br/>    <br/>        You can set the optional ignore_dangling_symlinks flag to true if you<br/>        want to silence this exception. Notice that this has no effect on<br/>        platforms that don&#x27;t support os.symlink.<br/>    <br/>        The optional ignore argument is a callable. If given, it<br/>        is called with the `src` parameter, which is the directory<br/>        being visited by copytree(), and `names` which is the list of<br/>        `src` contents, as returned by os.listdir():<br/>    <br/>            callable(src, names) -&gt; ignored_names<br/>    <br/>        Since copytree() is called recursively, the callable will be<br/>        called once for each directory that is copied. It returns a<br/>        list of names relative to the `src` directory that should<br/>        not be copied.<br/>    <br/>        The optional copy_function argument is a callable that will be used<br/>        to copy each file. It will be called with the source path and the<br/>        destination path as arguments. By default, copy2() is used, but any<br/>        function that supports the same signature (like copy()) can be used.<br/>    <br/>        &quot;&quot;&quot;<br/>        sys.audit(&quot;shutil.copytree&quot;, src, dst)<br/>&gt;       with os.scandir(src) as itr:<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_tf/image-classification/&#x27;</span><br/><br/>../../../../miniconda3/envs/perf/lib/python3.8/shutil.py:555: FileNotFoundError<br/> ------------------------------Captured stdout call------------------------------ <br/>generate writing directory : /tmp/0a4471d6-5604-4563-9dac-c30b62b018b8/
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_tf_image_classification_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab07f0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923f04f0&gt;<br/><br/>    def test_do_check_netmind_tf_image_classification_custom(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_tf/image-classification-custom/&quot;<br/>        try:<br/>&gt;           platform = platform_checker.check_from_dir(directory)<br/><br/>test_accuracy_prompts.py:139: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;PlatformChecker.PlatformChecker object at 0x7faf923f04f0&gt;, temp_dir = &#x27;tests/accuracy_prompts/netmind_tf/image-classification-custom/&#x27;<br/><br/>    def check_from_dir(self, temp_dir):<br/>        pytorch_checker = ModuleReferenceChecker(&quot;torch&quot;)<br/>        tensorflow_checker = ModuleReferenceChecker(&quot;tensorflow&quot;)<br/>        transformers_checker = ModuleReferenceChecker(&quot;transformers&quot;)<br/>        hivemind_checker = ModuleReferenceChecker(&quot;hivemind&quot;)<br/>        data_collector_for_mlm_checker = ModuleReferenceChecker(&quot;data_collector&quot;)<br/>        tf_trainer_checker = ModuleReferenceChecker(&quot;keras_callback&quot;)<br/>        checkers = [pytorch_checker, tensorflow_checker, hivemind_checker]<br/>    <br/>    <br/>&gt;       file_list = os.listdir(temp_dir)<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_tf/image-classification-custom/&#x27;</span><br/><br/>../PlatformChecker.py:100: FileNotFoundError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab07f0&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923f04f0&gt;<br/><br/>    def test_do_check_netmind_tf_image_classification_custom(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_tf/image-classification-custom/&quot;<br/>        try:<br/>            platform = platform_checker.check_from_dir(directory)<br/>            assert platform == CodePlatform.TENSORFLOW_CUSTOM_TRAINER<br/>        except Exception as e:<br/>&gt;           assert &quot;missing file&quot; in e.args[0]<br/><span class="error">E           TypeError: argument of type &#x27;int&#x27; is not iterable</span><br/><br/>test_accuracy_prompts.py:142: TypeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_tf_language_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0970&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf92409520&gt;<br/><br/>    def test_do_check_netmind_tf_language_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_tf/language-modeling/&quot;<br/>    <br/>        try:<br/>&gt;           platform = platform_checker.check_from_dir(directory)<br/><br/>test_accuracy_prompts.py:151: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;PlatformChecker.PlatformChecker object at 0x7faf92409520&gt;, temp_dir = &#x27;tests/accuracy_prompts/netmind_tf/language-modeling/&#x27;<br/><br/>    def check_from_dir(self, temp_dir):<br/>        pytorch_checker = ModuleReferenceChecker(&quot;torch&quot;)<br/>        tensorflow_checker = ModuleReferenceChecker(&quot;tensorflow&quot;)<br/>        transformers_checker = ModuleReferenceChecker(&quot;transformers&quot;)<br/>        hivemind_checker = ModuleReferenceChecker(&quot;hivemind&quot;)<br/>        data_collector_for_mlm_checker = ModuleReferenceChecker(&quot;data_collector&quot;)<br/>        tf_trainer_checker = ModuleReferenceChecker(&quot;keras_callback&quot;)<br/>        checkers = [pytorch_checker, tensorflow_checker, hivemind_checker]<br/>    <br/>    <br/>&gt;       file_list = os.listdir(temp_dir)<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_tf/language-modeling/&#x27;</span><br/><br/>../PlatformChecker.py:100: FileNotFoundError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0970&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf92409520&gt;<br/><br/>    def test_do_check_netmind_tf_language_callback(self, platform_checker: PlatformChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_tf/language-modeling/&quot;<br/>    <br/>        try:<br/>            platform = platform_checker.check_from_dir(directory)<br/>            assert platform == CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER<br/>            code_automation_handler.insert_code(platform, directory)<br/>        except Exception as e:<br/>&gt;           assert &quot;duplicate injection&quot; in e.args[0]<br/><span class="error">E           TypeError: argument of type &#x27;int&#x27; is not iterable</span><br/><br/>test_accuracy_prompts.py:155: TypeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_torch_language_callback</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7faf92387f10&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2cfe130&gt;<br/>code_checker = &lt;CodeChecker.CodeChecker object at 0x7fafb2cfe4c0&gt;<br/><br/>    def test_do_check_netmind_torch_language_callback(self, platform_checker: PlatformChecker,<br/>                                                      code_checker: CodeChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_torch/mlm_trainer_Huggince/&quot;<br/>&gt;       platform = platform_checker.check_from_dir(directory)<br/><br/>test_accuracy_prompts.py:163: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;PlatformChecker.PlatformChecker object at 0x7fafb2cfe130&gt;, temp_dir = &#x27;tests/accuracy_prompts/netmind_torch/mlm_trainer_Huggince/&#x27;<br/><br/>    def check_from_dir(self, temp_dir):<br/>        pytorch_checker = ModuleReferenceChecker(&quot;torch&quot;)<br/>        tensorflow_checker = ModuleReferenceChecker(&quot;tensorflow&quot;)<br/>        transformers_checker = ModuleReferenceChecker(&quot;transformers&quot;)<br/>        hivemind_checker = ModuleReferenceChecker(&quot;hivemind&quot;)<br/>        data_collector_for_mlm_checker = ModuleReferenceChecker(&quot;data_collector&quot;)<br/>        tf_trainer_checker = ModuleReferenceChecker(&quot;keras_callback&quot;)<br/>        checkers = [pytorch_checker, tensorflow_checker, hivemind_checker]<br/>    <br/>    <br/>&gt;       file_list = os.listdir(temp_dir)<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_torch/mlm_trainer_Huggince/&#x27;</span><br/><br/>../PlatformChecker.py:100: FileNotFoundError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_torch_language_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0790&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf924004f0&gt;<br/>code_checker = &lt;CodeChecker.CodeChecker object at 0x7faf92400f40&gt;<br/><br/>    def test_do_check_netmind_torch_language_custom(self, platform_checker: PlatformChecker,<br/>                                                      code_checker: CodeChecker):<br/>    <br/>        directory = &quot;tests/accuracy_prompts/netmind_torch/mlm_trainer_customer/&quot;<br/>&gt;       platform = platform_checker.check_from_dir(directory)<br/><br/>test_accuracy_prompts.py:182: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;PlatformChecker.PlatformChecker object at 0x7faf924004f0&gt;, temp_dir = &#x27;tests/accuracy_prompts/netmind_torch/mlm_trainer_customer/&#x27;<br/><br/>    def check_from_dir(self, temp_dir):<br/>        pytorch_checker = ModuleReferenceChecker(&quot;torch&quot;)<br/>        tensorflow_checker = ModuleReferenceChecker(&quot;tensorflow&quot;)<br/>        transformers_checker = ModuleReferenceChecker(&quot;transformers&quot;)<br/>        hivemind_checker = ModuleReferenceChecker(&quot;hivemind&quot;)<br/>        data_collector_for_mlm_checker = ModuleReferenceChecker(&quot;data_collector&quot;)<br/>        tf_trainer_checker = ModuleReferenceChecker(&quot;keras_callback&quot;)<br/>        checkers = [pytorch_checker, tensorflow_checker, hivemind_checker]<br/>    <br/>    <br/>&gt;       file_list = os.listdir(temp_dir)<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_torch/mlm_trainer_customer/&#x27;</span><br/><br/>../PlatformChecker.py:100: FileNotFoundError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_accuracy_prompts.py::TestAccuracyPrompts::test_do_check_netmind_torch_image_custom</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0250&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923e7c70&gt;<br/><br/>    def test_do_check_netmind_torch_image_custom(self, platform_checker: PlatformChecker):<br/>        directory = &quot;tests/accuracy_prompts/netmind_torch/resnet/&quot;<br/>        try:<br/>&gt;           platform = platform_checker.check_from_dir(directory)<br/><br/>test_accuracy_prompts.py:201: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;PlatformChecker.PlatformChecker object at 0x7faf923e7c70&gt;, temp_dir = &#x27;tests/accuracy_prompts/netmind_torch/resnet/&#x27;<br/><br/>    def check_from_dir(self, temp_dir):<br/>        pytorch_checker = ModuleReferenceChecker(&quot;torch&quot;)<br/>        tensorflow_checker = ModuleReferenceChecker(&quot;tensorflow&quot;)<br/>        transformers_checker = ModuleReferenceChecker(&quot;transformers&quot;)<br/>        hivemind_checker = ModuleReferenceChecker(&quot;hivemind&quot;)<br/>        data_collector_for_mlm_checker = ModuleReferenceChecker(&quot;data_collector&quot;)<br/>        tf_trainer_checker = ModuleReferenceChecker(&quot;keras_callback&quot;)<br/>        checkers = [pytorch_checker, tensorflow_checker, hivemind_checker]<br/>    <br/>    <br/>&gt;       file_list = os.listdir(temp_dir)<br/><span class="error">E       FileNotFoundError: [Errno 2] No such file or directory: &#x27;tests/accuracy_prompts/netmind_torch/resnet/&#x27;</span><br/><br/>../PlatformChecker.py:100: FileNotFoundError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;tests.test_accuracy_prompts.TestAccuracyPrompts object at 0x7fafb2ab0250&gt;, platform_checker = &lt;PlatformChecker.PlatformChecker object at 0x7faf923e7c70&gt;<br/><br/>    def test_do_check_netmind_torch_image_custom(self, platform_checker: PlatformChecker):<br/>        directory = &quot;tests/accuracy_prompts/netmind_torch/resnet/&quot;<br/>        try:<br/>            platform = platform_checker.check_from_dir(directory)<br/>            assert platform == CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL<br/>        except Exception as e:<br/>&gt;           assert &quot;missing file&quot; in e.args[0]<br/><span class="error">E           TypeError: argument of type &#x27;int&#x27; is not iterable</span><br/><br/>test_accuracy_prompts.py:204: TypeError<br/></div></td></tr></tbody></table></body></html>

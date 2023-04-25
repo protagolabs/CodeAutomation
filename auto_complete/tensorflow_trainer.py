@@ -12,9 +12,8 @@ def init_callback_tf_injection_list():
 
 
 class TensorflowTrainerHandler(NodeVisitor):
-
-    fit_args_body = []
-
+    def __init__(self):
+        TensorflowTrainerHandler.fit_args_body = []
     def visit_ImportFrom(self, node: ImportFrom):
         attr_tuple_list = [
             ('names', list, alias),
