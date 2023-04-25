@@ -1,9 +1,4 @@
 from NetmindMixins.Netmind import nmp
-from NetmindMixins.Netmind import nmp
-from NetmindMixins.Netmind import nmp
-from NetmindMixins.Netmind import nmp
-from NetmindMixins.Netmind import nmp
-from NetmindMixins.Netmind import nmp
 import transformers
 import torch
 from tqdm import tqdm
@@ -37,17 +32,7 @@ def main(args):
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
     
     # Prepare optimizer
-    optimizer = get_optimizer(model,args)    
-
-    nmp.init()
-
-    nmp.init()
-
-    nmp.init()
-
-    nmp.init()
-
-    nmp.init()
+    optimizer = get_optimizer(model,args)
     nmp.init()
     # start train
     train(tokenizer, data_collator, dataset, model, optimizer, args)
@@ -66,6 +51,9 @@ if __name__ == '__main__':
         import traceback
         traceback.print_exc()
         exit(1)
+
+
+
 
 
 

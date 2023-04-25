@@ -235,6 +235,7 @@ class JobCommonService:
         #for meta_list in update_file_dict[code_platform][1]:
         #    meta_list
         update_file_dict[code_platform][4]()
+        delay_insertion_table = {}
         for index, train_file in enumerate(update_file_dict[code_platform][0]):
             target_file = temp_dir + train_file
             if not os.path.exists(target_file):
@@ -279,9 +280,11 @@ class JobCommonService:
                     elif elem.operation == InjectionOperation.DELETE:
                         del lines[elem.insert_line_no - 1]
                 s = "".join(lines)
+            delay_insertion_table[target_file] = s
 
-            with open(target_file, "w") as f:
-                f.write(s)
+        for k,v in delay_insertion_table.items():
+            with open(k, "w") as f:
+                f.write(v)
 
         logger.debug(f'visited_table.values() : {visited_table.values()}')
         for item in visited_table.values():
