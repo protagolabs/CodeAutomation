@@ -319,13 +319,13 @@ class CodeAutomationHandler:
                     os.system(f"rm {path}")
 
     def check(self, event):
-
-        if not event.get("code_file"):
+        self.payload_check(event)
+        if not event["payload"].get("code_file"):
             raise ResourceNotFoundException(
-                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("code_file")
+                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("payload.code_file")
             )
 
-        result = re.search(Regex.S3_CODE_FILE_URI, event["code_file"])
+        result = re.search(Regex.S3_CODE_FILE_URI, event["payload"]["code_file"])
         if result is None:
             raise ResourceNotFoundException(msg.S3_CODE_URI_ERROR)
 
@@ -449,19 +449,38 @@ class CodeAutomationHandler:
         logger.info(f"code_platform : {code_platform}")
         code_checker_dict[code_platform](code_path, code_platform)
 
+    def get_code_structure(self, event):
+        self.payload_check(event)
+
+        if not event["payload"].get("s3_url"):
+            raise ResourceNotFoundException(
+                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("s3_url")
+            )
+
+        result = re.search(Regex.S3_CODE_FILE_URI, event["payload"]["s3_url"])
+        if result is None:
+            raise ResourceNotFoundException(msg.S3_CODE_URI_ERROR)
+
+        return code_structure_dao.get_by_s3_key(result.group(1))
+
+    def action(self, action):
+        actions = {
+            "check": self.check,
+            "get_code_structure": self.get_code_structure
+        }
+        return actions.get(action)
 
 
 
     """
     Handle api request
     """
-
     def api_gateway(self, event, context) -> Ret:
         try:
             logger.debug(event)
 
             return Ret.ok(
-                data=self.check(event), code=HttpCode.HTTP_OK
+                data=self.action(event["action"])(event), code=HttpCode.HTTP_OK
             )
         except (
                 ResourceNotFoundException,
@@ -489,11 +508,27 @@ def handle(event, context):
 
 if __name__ == '__main__':
     service = CodeAutomationHandler()
+
     payload = {
-
+        "action": "check",
+        "payload":
+            {
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_resnet_custom_raw.tar.gz"
-
+                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-mlm-trainer-automated.tar.gz"
+            }
     }
     ret = service.api_gateway(payload, None)
     print(f'ret : {ret}')
+
+
+    structure_payload = {
+        "action": "get_code_structure",
+        "payload":
+            {
+                "s3_url": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
+                          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-mlm-trainer-automated.tar.gz"
+            }
+    }
+    ret = service.api_gateway(structure_payload, None)
+    print(f'ret : {ret}')
+
