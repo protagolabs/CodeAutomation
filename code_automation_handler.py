@@ -490,7 +490,7 @@ class CodeAutomationHandler:
         ) as e:
             logger.exception(e)
             return Ret.fail(
-                msg=(e.msg if hasattr(e, "msg") else repr(e)),
+                msg=(e.msg if hasattr(e, "msg") else str(e)),
                 code=HttpCode.HTTP_INTERNAL_SERVER_ERROR,
             )
 
@@ -514,21 +514,18 @@ if __name__ == '__main__':
         "payload":
             {
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-mlm-trainer-automated.tar.gz"
+                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
     }
     ret = service.api_gateway(payload, None)
-    print(f'ret : {ret}')
-
-
+    print(f'check ret : {ret}')
     structure_payload = {
         "action": "get_code_structure",
         "payload":
             {
                 "s3_url": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-mlm-trainer-automated.tar.gz"
+                          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
     }
     ret = service.api_gateway(structure_payload, None)
-    print(f'ret : {ret}')
-
+    print(f'get_code_structure ret : {ret}')

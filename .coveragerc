@@ -1,0 +1,5 @@
+[run]
+omit =
+       boto3_layer/*
+       webkit_layer/*
+       k8s_layer/*
