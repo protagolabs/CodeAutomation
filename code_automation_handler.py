@@ -381,7 +381,7 @@ class CodeAutomationHandler:
                     print(
                         f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_key}"
                     )
-                    # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             elif s3_key.endswith(".zip"):
                 with tempfile.TemporaryFile(suffix=".zip") as f:
                     with zipfile.ZipFile(f, "w") as zip_file:
@@ -396,7 +396,7 @@ class CodeAutomationHandler:
                                 )
                     f.flush()
                     f.seek(0)
-                    # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
 
         # upload origin package with another
         s3_key_list = s3_key.split('/')
@@ -409,7 +409,7 @@ class CodeAutomationHandler:
             logger.info(
                 f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_origin_package_key}"
             )
-            # aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
+            aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
 
         try:
 
