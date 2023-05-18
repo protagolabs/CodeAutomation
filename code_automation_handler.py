@@ -223,7 +223,7 @@ class CodeAutomationHandler:
 
         if code_platform not in update_file_dict.keys():
             logger.error(f"error code platform : {code_platform}, check {temp_dir}")
-            raise CodeNotCompliantException()
+            raise CodeNotCompliantException(f"error code platform : {code_platform}")
 
         missing_feature_point_list = []
 
@@ -514,11 +514,13 @@ if __name__ == '__main__':
         "payload":
             {
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
+                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_mlm_custom_trainer_raw.tar.gz"
             }
     }
+
     ret = service.api_gateway(payload, None)
     print(f'check ret : {ret}')
+    """
     structure_payload = {
         "action": "get_code_structure",
         "payload":
@@ -529,3 +531,4 @@ if __name__ == '__main__':
     }
     ret = service.api_gateway(structure_payload, None)
     print(f'get_code_structure ret : {ret}')
+    """

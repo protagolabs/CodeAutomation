@@ -227,15 +227,15 @@ class PlatformChecker(AstChecker):
             ),
             (
                 CodePlatform.PYTORCH_TRANSFORMERS_TRAINER,
-                [True, True, False, False, False, True],
+                [True, True, False, False, False],
             ),
             (
                 CodePlatform.PYTORCH_CUSTOM_TRAINER,
-                [False, True, False, False, False, True],
+                [False, True, False, False, False],
             ),
             (
                 CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL,
-                [False, True, False, False, False, False],
+                [False, True, False, False, False],
             ),
             (
                 CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER,
