@@ -125,6 +125,7 @@ class PlatformChecker(AstChecker):
                 transformers_trainer_Trainer = self.find_imported_func_name(
                     ast_root_node, "transformers.trainer.Trainer"
                 )
+
                 data_collector_for_mlm_validater = self.find_imported_func_name(
                     ast_root_node, "transformers.DataCollatorForLanguageModeling"
                 )
@@ -231,11 +232,11 @@ class PlatformChecker(AstChecker):
             ),
             (
                 CodePlatform.PYTORCH_CUSTOM_TRAINER,
-                [False, True, False, False, False],
+                [False, True, False, False, False, True],
             ),
             (
                 CodePlatform.PYTORCH_CUSTOM_TRAINER_WITH_EVAL,
-                [False, True, False, False, False],
+                [False, True, False, False, False, False],
             ),
             (
                 CodePlatform.TENSORFLOW_TRANSFORMERS_TRAINER,

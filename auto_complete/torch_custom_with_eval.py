@@ -129,6 +129,9 @@ class TorchCustomWithEvalTrainerHandler(ast.NodeVisitor):
         TorchCustomWithEvalTrainerHandler.outer_loop_visited = False
         TorchCustomWithEvalTrainerHandler.for_loop_finished = False
 
+        TorchCustomWithEvalTrainerHandler.current_function_name = None
+        TorchCustomWithEvalTrainerHandler.step_valid_scope = ['train']
+
     def visit_ImportFrom(self, node: ImportFrom):
 
         attr_tuple_list = [
@@ -145,6 +148,9 @@ class TorchCustomWithEvalTrainerHandler(ast.NodeVisitor):
             ('name', str)
         ]
         assign_attr_name = get_attr_recursively(node, attr_tuple_list)
+        if assign_attr_name:
+            TorchCustomWithEvalTrainerHandler.current_function_name = assign_attr_name
+
         if assign_attr_name == 'validate':
             validate_injection = CodeInjectionData(node.end_lineno -1  , evaluate_expr,
                                                         node.col_offset + 4)
@@ -191,6 +197,10 @@ class TorchCustomWithEvalTrainerHandler(ast.NodeVisitor):
                 pytorch_resnet_custom_visited_table[cur_epoch_expr][0] = True
                 pytorch_resnet_custom_visited_table[outer_loop_expr][0] = True
         else:
+
+            if TorchCustomWithEvalTrainerHandler.current_function_name not in TorchCustomWithEvalTrainerHandler.step_valid_scope:
+                self.generic_visit(node)
+                return node
 
             torch_trainer_inner_loop_list = [
                 (node.lineno , should_skip_expr, node.col_offset + 4),
