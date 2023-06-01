@@ -55,14 +55,12 @@ class PlatformChecker(AstChecker):
             "arguments.py",
             "data.py",
             "model.py",
-            "optimizer.py",
             "train_dist.py",
             "trainer.py",
         }
         """
         self.torch_platform_validation_file_name_set = {
             "data.py",
-            "optimizer.py",
             "train_dist.py",
             "trainer.py",
         }
@@ -71,7 +69,6 @@ class PlatformChecker(AstChecker):
             "train_netmind.py",
             "train_dist.py",
             "trainer.py",
-            "optimizer.py",
         }
         #self.legal_intersection = self.tf_legal_file_name_set & self.torch_legal_file_name_set
 
