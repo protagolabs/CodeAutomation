@@ -268,7 +268,7 @@ class CodeAutomationHandler:
                         f"offset : {elem.col_offset}"
                     )
                     if elem.operation == InjectionOperation.ADD:
-                        # if insert in lastest line, must confirm there exits \n character after last line
+                        # if insert in lastest line, must confirm there exists \n character after last line
                         if elem.insert_expr[-1] != '\n':
                             # print(f'elem.insert_line_no : {elem.insert_line_no}, elem.insert_expr: {elem.insert_expr}')
                             # lines.insert(elem.insert_line_no, "\n")
@@ -514,7 +514,7 @@ if __name__ == '__main__':
         "payload":
             {
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_mlm_custom_trainer_raw.tar.gz"
+                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_mlm_transformers_trainer_raw.tar.gz"
             }
     }
 

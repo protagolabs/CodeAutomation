@@ -19,14 +19,14 @@ train_expr =  "{}.train(resume_from_checkpoint=latest_checkpoint)"
 
 
 # feature point
-feature_optimizer = "optimizer = get_optimizer(model,args)"
+feature_model = "model, tokenizer = get_model(args)"
 feature_callback_class = "class CustomTrainerCallback(transformers.TrainerCallback)"
 feature_callback_args = "callbacks=[CustomTrainerCallback]"
 feature_train_function = "def train(tokenizer, data_collator, tokenized_datasets, model, optimizer, args)"
 
 
 pytorch_trainer_visited_table = {
-    nmp_init_expr: [False, feature_optimizer],
+    nmp_init_expr: [False, feature_model],
     callback_expr: [False, feature_callback_class],
     trainer_expr: [False, feature_callback_args],
     #last_checkpoint_expr: [False, ],
