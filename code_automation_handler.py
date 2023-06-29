@@ -339,17 +339,26 @@ class CodeAutomationHandler:
 
         uncompress_code(tf.name, temp_dir)
 
+
         output = [
             directory
             for directory in os.listdir(temp_dir)
             if os.path.isdir(os.path.join(temp_dir, directory))
         ]
-        if len(output) == 2:
+        if len(output) >= 2:
             if "__MACOSX" in output:
                 del output[output.index("__MACOSX")]
-        file_dir = output[0] if len(output) == 1 else ""
-        origin_dir = temp_dir + "/"
-        temp_dir = temp_dir + "/" + file_dir + "/"
+
+        temp_dir += '/'
+        file_list = os.listdir(temp_dir)
+        file_list = set(filter(lambda x: x.endswith(".py"), file_list))
+        if len(file_list) > 0:
+            #py file exists in code pacakge root dir
+            origin_dir = os.path.dirname(temp_dir) + '/'
+        else:
+            file_dir = output[0] if len(output) == 1 else ""
+            origin_dir = temp_dir
+            temp_dir = temp_dir + file_dir + "/"
 
         self.handle_ipynb(temp_dir)
         code_platform = platform_checker.check_from_dir(temp_dir)
@@ -514,7 +523,7 @@ if __name__ == '__main__':
         "payload":
             {
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "0f3f0a85-3510-4df1-8608-6f7a61d2042b/torch_mlm_transformers_trainer_raw.tar.gz"
+                             "04b64bb2-6edd-43a1-bc43-65e6a186598d/torch_mlm_transformers_trainer_raw_bert.tar.gz"
             }
     }
 
