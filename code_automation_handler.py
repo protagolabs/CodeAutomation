@@ -378,16 +378,15 @@ class CodeAutomationHandler:
             code_structure_dao.insert_one(code_structure_do.__dict__)
 
         def _compress_tar(file_path):
-
             if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
                 with tempfile.TemporaryFile(suffix=".tar.gz") as f:
-                    with tarfile.open(fileobj=f, mode="w:gz") as tar:
+                    with tarfile.open(fileobj=f, mode="w:gz", compresslevel=5) as tar:
                         arcname = os.path.basename(file_path)
                         print(f"add {file_path} , {arcname}")
                         tar.add(file_path, arcname=os.path.basename(file_path))
                     f.flush()
                     f.seek(0)
-                    print(
+                    logger.info(
                         f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_key}"
                     )
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
