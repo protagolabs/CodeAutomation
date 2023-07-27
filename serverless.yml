@@ -55,6 +55,10 @@ custom:
 provider:
   name: aws
   runtime: python3.8
+  ecr:
+    images:
+      nuitka_images:
+        path: ./build
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -96,6 +100,27 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
+
+  build:
+    alarms:
+      - functionLogErrors
+    image:
+      name: nuitka_images
+    timeout: 15
+    environment:
+      DOMAIN: ${opt:stage}
+      REGION: ${opt:region}
+      ENV_FOR_DYNACONF: ${opt:stage}-${opt:region}
+    events:
+      - http:
+          method: POST
+          path: /check
+          cors: true
+          integration: lambda
+          request:
+            passThrough: WHEN_NO_MATCH
+            template:
+              application/json: '$input.json("$")'
 
 
 plugins:
