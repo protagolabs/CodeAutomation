@@ -101,11 +101,13 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
 
-  build:
+  compile:
     alarms:
       - functionLogErrors
     image:
       name: nuitka_images
+      command:
+        - build.hello.handler
     timeout: 15
     environment:
       DOMAIN: ${opt:stage}
@@ -114,7 +116,7 @@ functions:
     events:
       - http:
           method: POST
-          path: /check
+          path: /compile
           cors: true
           integration: lambda
           request:
