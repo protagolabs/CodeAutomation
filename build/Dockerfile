@@ -1,30 +1,32 @@
-FROM 134622832812.dkr.ecr.us-west-2.amazonaws.com/ubuntu:20.04
-LABEL maintainer="yang.li@protagolabs.com"
+# Define custom function directory
+ARG FUNCTION_DIR="/code_automation"
 
+FROM python:3.8 as build-image
 
-RUN apt-get update && apt-get install -y --no-install-recommends --force-yes \
-  build-essential \
-  wget \
-  git \
-  git-lfs \
-  vim \
-  && apt-get clean autoclean && rm -rf /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
+# Include global arg in this stage of the build
+ARG FUNCTION_DIR
 
-RUN git lfs install
+# Copy function code
+RUN mkdir -p ${FUNCTION_DIR}
+COPY . ${FUNCTION_DIR}
 
-RUN wget --no-check-certificate https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O install_miniconda.sh && \
-bash install_miniconda.sh -b -p /opt/conda && rm install_miniconda.sh
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV PYTHONHOME="/opt/conda"
+# Install the function's dependencies
+RUN pip install \
+    --target ${FUNCTION_DIR} \
+        awslambdaric
 
-RUN conda install python==3.8 pip && \
-    conda clean --all
+# Use a slim version of the base Python image to reduce the final image size
+FROM python:3.8-slim
 
-COPY ./* /src/
-WORKDIR /src/
+# Include global arg in this stage of the build
+ARG FUNCTION_DIR
+# Set working directory to function root directory
+WORKDIR ${FUNCTION_DIR}
 
-RUN pip install -r requirements.txt
-ENTRYPOINT ["python","hello.py"]
+# Copy in the built dependencies
+COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
 
-
-
+# Set runtime interface client as default command for the container runtime
+ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
+# Pass the name of the function handler as an argument to the runtime
+CMD [ "hello.handler" ]
