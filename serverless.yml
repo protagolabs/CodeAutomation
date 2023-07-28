@@ -58,7 +58,7 @@ provider:
   ecr:
     images:
       nuitka_images:
-        path: ./build
+        path: ./compile
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -100,12 +100,12 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
-  hello:
+  compile:
     image: nuitka_images
     events:
       - http:
           method: POST
-          path: /hello
+          path: /compile
           cors: true
           integration: lambda
           request:
