@@ -3,6 +3,8 @@ import uuid
 
 import boto3
 import subprocess
+import datetime
+
 
 import time
 import logging
@@ -26,10 +28,10 @@ def validate_path(path):
         raise FileExistsError(f'path {path} already exists')
 
 class CodeBuilder:
-    def __init__(self, jobid, entry_point) -> None:
+    def __init__(self, s3_path, entry_point) -> None:
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
-        self.s3_key = os.getenv("S3_KEY", f"{jobid}/tf-resnet-trainer-raw.tar.gz")
-        self.entry_point_file = os.getenv("ENTRY_POINT", 'train_dist.py')
+        self.s3_key = s3_path
+        self.entry_point_file = entry_point
 
     def download_code(self):
         compress_dir = ''
@@ -83,19 +85,24 @@ class CodeBuilder:
         compress_dir, code_dir = self.download_code()
 
         compile_path = os.path.join(code_dir, '*')
-        output_file = os.path.join(compress_dir, 'binary_run_file')
+        output_file = os.path.join('/tmp', 'binary_run_file')
+
 
         if not compress_dir and not code_dir:
             raise Exception(f'get code from {self.s3_bucket}:{self.s3_key} failed')
 
-
         entry_point = os.path.join(code_dir, self.entry_point_file)
+        import datetime
+        starttime = datetime.datetime.now()
         command_compile_binary_package = f"python -m nuitka --nofollow-imports {entry_point}" \
                                          f" --include-plugin-files={compile_path} " \
-                                         f"--output-filename={output_file}"
+                                         f"--output-filename={output_file} --output-dir=/tmp"
 
         try:
-            ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=True, encoding='utf-8')
+
+            ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
+            endtime = datetime.datetime.now()
+            print(f'command cost : {endtime - starttime}')
 
             validate_status(ret.returncode, command_compile_binary_package)
             logger.info(f'execute command {command_compile_binary_package} finish')
@@ -114,8 +121,12 @@ class CodeBuilder:
 
 
 def handler(event, context):
-    logger.info(f'receive event: {event}')
-    build = CodeBuilder(jobid, entry_point)
+    logger.info(f'receive event: {event}, type: {type(event)}')
+    if 's3_path' not in event or 'entry_point' not in event:
+        raise ValueError(f'invalid format {event}')
+    s3_path = event['s3_path']
+    entry_point = event['entry_point']
+    build = CodeBuilder(s3_path, entry_point)
     build.build()
 
 
