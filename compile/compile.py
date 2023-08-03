@@ -8,7 +8,8 @@ import datetime
 
 import time
 import logging
-from tool import uncompress_code
+from multipledispatch import dispatch
+from tool import uncompress_code, lambda_invoke
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = False
@@ -18,6 +19,7 @@ region = os.getenv("REGION", "us-west-2")
 domain = os.getenv("DOMAIN", "dev")
 
 s3_client = boto3.client('s3', region_name = region)
+LAMBDA_PREPARE_COMPLETE = f'arn:aws:lambda:us-west-2:134622832812:function:netmind-services-job-management-{domain}-trainPreparationComplete'
 
 def validate_status(status, command_rsa_build_client):
     if status:
@@ -28,7 +30,8 @@ def validate_path(path):
         raise FileExistsError(f'path {path} already exists')
 
 class CodeBuilder:
-    def __init__(self, s3_path, entry_point) -> None:
+    def __init__(self, job_id, s3_path, entry_point) -> None:
+        self.job_id = job_id
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
         self.s3_key = s3_path
         self.entry_point_file = entry_point
@@ -42,9 +45,9 @@ class CodeBuilder:
 
             file_name = self.s3_key.split('/')[1]
             write_obj = os.path.join('/tmp', file_name)
-
-            s3_client.download_file( self.s3_bucket, self.s3_key, write_obj)
+            
             logger.info(f'download {self.s3_bucket}, {self.s3_key}')
+            s3_client.download_file( self.s3_bucket, self.s3_key, write_obj)
 
 
             temp_dir = "/tmp/" + str(uuid.uuid4())
@@ -92,6 +95,7 @@ class CodeBuilder:
             raise Exception(f'get code from {self.s3_bucket}:{self.s3_key} failed')
 
         entry_point = os.path.join(code_dir, self.entry_point_file)
+
         import datetime
         starttime = datetime.datetime.now()
         command_compile_binary_package = f"python -m nuitka --nofollow-imports {entry_point}" \
@@ -107,6 +111,7 @@ class CodeBuilder:
             validate_status(ret.returncode, command_compile_binary_package)
             logger.info(f'execute command {command_compile_binary_package} finish')
             logger.info(ret)
+            
         except Exception as e:
             logger.info(e)
 
@@ -117,16 +122,22 @@ class CodeBuilder:
 
         ret = subprocess.run(f"rm -rf {compress_dir}", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove_dir : {compress_dir}')
+        param = {'job_id': self.job_id}
+        logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
+        lambda_invoke(LAMBDA_PREPARE_COMPLETE,  param)
 
 
 
 def handler(event, context):
     logger.info(f'receive event: {event}, type: {type(event)}')
-    if 's3_path' not in event or 'entry_point' not in event:
-        raise ValueError(f'invalid format {event}')
+    field_list = ['s3_path', 'entry_point', 'job_id']
+    for field in field_list:
+        if field not in event:
+            raise ValueError(f'invalid format {event}')
+    job_id = event['job_id']
     s3_path = event['s3_path']
     entry_point = event['entry_point']
-    build = CodeBuilder(s3_path, entry_point)
+    build = CodeBuilder(job_id, s3_path, entry_point)
     build.build()
 
 

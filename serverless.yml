@@ -102,6 +102,9 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
   compile:
     image: nuitka_images
+    environment:
+      DOMAIN: ${opt:stage}
+      REGION: ${opt:region}
     events:
       - http:
           method: POST

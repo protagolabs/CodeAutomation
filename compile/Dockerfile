@@ -20,8 +20,24 @@ RUN pip install \
 
 # Use a slim version of the base Python image to reduce the final image size
 FROM python:3.8
-#FROM 134622832812.dkr.ecr.us-west-2.amazonaws.com/ubuntu:20.04
 
+
+RUN apt-get update && apt-get install -y --no-install-recommends --force-yes \
+  build-essential \
+  wget \
+  git \
+  git-lfs \
+  vim \
+  && apt-get clean autoclean && rm -rf /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
+RUN git lfs install
+
+RUN wget --no-check-certificate https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O install_miniconda.sh && \
+bash install_miniconda.sh -b -p /opt/conda && rm install_miniconda.sh
+
+ENV PATH="/opt/conda/bin:${PATH}"
+RUN conda install python==3.8 pip && \
+    conda clean --all
+ENV PYTHONHOME="/opt/conda"
 
 
 # Include global arg in this stage of the build
