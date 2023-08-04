@@ -317,7 +317,7 @@ class CodeAutomationHandler:
                                     py_file.write(line)
                                 py_file.write("\n")
                     os.system(f"rm {path}")
-    """
+
     def check(self, event):
         self.payload_check(event)
         if not event["payload"].get("code_file"):
@@ -439,69 +439,7 @@ class CodeAutomationHandler:
             "error": code_checker.error,
             "structure": code_structure_do.structure,
         }
-    """
 
-    def check(self, event):
-        self.payload_check(event)
-        if not event["payload"].get("code_file"):
-            raise ResourceNotFoundException(
-                msg.RESOURCE_NOT_FOUND_MESSAGE_TEMPLATE.format("payload.code_file")
-            )
-
-        result = re.search(Regex.S3_CODE_FILE_URI, event["payload"]["code_file"])
-        if result is None:
-            raise ResourceNotFoundException(msg.S3_CODE_URI_ERROR)
-
-        s3_key = result.group(1)
-
-        temp_dir = "/tmp/" + str(uuid4())
-        os.makedirs(temp_dir, exist_ok=True)
-        logger.info(f"downloading {AwsS3.S3_JOB_MODEL_CODE_BUCKET} by key : {s3_key}")
-        tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
-
-        uncompress_code(tf.name, temp_dir)
-
-        output = [
-            directory
-            for directory in os.listdir(temp_dir)
-            if os.path.isdir(os.path.join(temp_dir, directory))
-        ]
-        if len(output) >= 2:
-            if "__MACOSX" in output:
-                del output[output.index("__MACOSX")]
-
-        temp_dir += '/'
-        file_list = os.listdir(temp_dir)
-        file_list = set(filter(lambda x: x.endswith(".py"), file_list))
-        if len(file_list) > 0:
-            # py file exists in code pacakge root dir
-            origin_dir = os.path.dirname(temp_dir) + '/'
-        else:
-            file_dir = output[0] if len(output) == 1 else ""
-            origin_dir = temp_dir
-            temp_dir = temp_dir + file_dir + "/"
-
-
-        # save directory structure
-        code_file_json = dir_to_json(temp_dir)
-        try:
-            code_structure_do = code_structure_dao.get_by_s3_key(s3_key)
-            code_structure_dao.update_by_id(
-                code_structure_do.id, structure=json.dumps(code_file_json)
-            )
-        except ResourceNotFoundException:
-            logger.warn("Related code object not found, create it.")
-            code_structure_do = CodeStructureDo(
-                str(uuid.uuid4()), s3_key, json.dumps(code_file_json), FileLoc.S3
-            )
-            code_structure_dao.insert_one(code_structure_do.__dict__)
-
-        shutil.rmtree(temp_dir)
-        return {
-            "warn": [],
-            "error": [],
-            "structure": code_structure_do.structure,
-        }
     def validate_netmind_interface(self, code_checker, code_platform, code_path):
 
         code_checker_dict = {
