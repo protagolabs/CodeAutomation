@@ -115,8 +115,19 @@ functions:
             passThrough: WHEN_NO_MATCH
             template:
               application/json: '$input.json("$")'
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - CodeCompileQueue
+              - Arn
 
-
+resources:
+  - Resources:
+      CodeCompileQueue:
+        Type: "AWS::SQS::Queue"
+        Properties:
+          QueueName: netmind-code-compile-queue-${opt:stage}
+          VisibilityTimeout: 200
 plugins:
   - serverless-python-requirements
   - serverless-latest-layer-version
