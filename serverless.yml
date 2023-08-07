@@ -101,7 +101,9 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
   compile:
+    memorySize: 2048
     image: nuitka_images
+    timeout: 30
     environment:
       DOMAIN: ${opt:stage}
       REGION: ${opt:region}
@@ -126,8 +128,8 @@ resources:
       CodeCompileQueue:
         Type: "AWS::SQS::Queue"
         Properties:
-          QueueName: netmind-code-compile-queue-${opt:stage}
-          VisibilityTimeout: 200
+          QueueName: netmind-code-compile-${opt:stage}-queue
+          VisibilityTimeout: 30
 plugins:
   - serverless-python-requirements
   - serverless-latest-layer-version
