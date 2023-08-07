@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 
 import boto3
 import subprocess
@@ -130,13 +131,19 @@ class CodeBuilder:
 
 def handler(event, context):
     logger.info(f'receive event: {event}, type: {type(event)}')
+    if "Records" not in event:
+        raise ValueError(f'invalid format {event}')
+
+    message_body = event["Records"][0]["body"]
+    json_body = json.loads(message_body)
     field_list = ['s3_path', 'entry_point', 'job_id']
+
     for field in field_list:
-        if field not in event:
+        if field not in json_body:
             raise ValueError(f'invalid format {event}')
-    job_id = event['job_id']
-    s3_path = event['s3_path']
-    entry_point = event['entry_point']
+    job_id = json_body['job_id']
+    s3_path = json_body['s3_path']
+    entry_point = json_body['entry_point']
     build = CodeBuilder(job_id, s3_path, entry_point)
     build.build()
 
