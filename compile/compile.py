@@ -20,6 +20,8 @@ region = os.getenv("REGION", "us-west-2")
 domain = os.getenv("DOMAIN", "dev")
 
 s3_client = boto3.client('s3', region_name = region)
+s3_dynamodb = boto3.client('dynamodb', region_name = region)
+
 LAMBDA_PREPARE_COMPLETE = f'arn:aws:lambda:us-west-2:134622832812:function:netmind-services-job-management-{domain}-trainPreparationComplete'
 
 def validate_status(status, command_rsa_build_client):
