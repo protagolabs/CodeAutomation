@@ -46,7 +46,7 @@ class CodeBuilder:
 
             file_name = self.s3_key.split('/')[1]
             write_obj = os.path.join('/tmp', file_name)
-            
+
             logger.info(f'download {self.s3_bucket}, {self.s3_key}')
             s3_client.download_file( self.s3_bucket, self.s3_key, write_obj)
 
@@ -60,6 +60,8 @@ class CodeBuilder:
             items = os.listdir(temp_dir)
             logger.info(f'items: {items}')
             for sub_dir in items:
+                if sub_dir == '__MACOSX':
+                    continue
                 if os.path.isdir(os.path.join(compress_dir, sub_dir)):
                     temp_dir = os.path.join(temp_dir, sub_dir)
 
@@ -87,6 +89,8 @@ class CodeBuilder:
 
     def build(self):
         compress_dir, code_dir = self.download_code()
+        if not compress_dir or not code_dir:
+            raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
         compile_path = os.path.join(code_dir, '*')
         output_file = os.path.join('/tmp', 'binary_run_file')
@@ -112,7 +116,7 @@ class CodeBuilder:
             validate_status(ret.returncode, command_compile_binary_package)
             logger.info(f'execute command {command_compile_binary_package} finish')
             logger.info(ret)
-            
+
         except Exception as e:
             logger.info(e)
 
