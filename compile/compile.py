@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import json
 
@@ -6,12 +7,9 @@ import boto3
 import subprocess
 
 import logging
-from compile.tool import uncompress_code, lambda_invoke
+from tool import uncompress_code, lambda_invoke
+sys.path.append("..")
 from dynamodb.job_event import job_event_dao, EventLevel
-try:
-    from Const import JobStatus
-except ModuleNotFoundError:
-    from boto3_layer.python.Const import JobStatus
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -151,6 +149,6 @@ def handler(event, context):
         build.build()
     except Exception:
         event_msg = f"compile by event {json_body} failed"
-        job_event_dao.quick_insert(job_id, JobStatus.FAILED, EventLevel.ERROR, event_msg)
+        job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
 
