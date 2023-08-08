@@ -329,7 +329,6 @@ class CodeAutomationHandler:
         if result is None:
             raise ResourceNotFoundException(msg.S3_CODE_URI_ERROR)
 
-        platform_checker = PlatformChecker()
         s3_key = result.group(1)
 
         temp_dir = "/tmp/" + str(uuid4())
@@ -338,7 +337,6 @@ class CodeAutomationHandler:
         tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
 
         uncompress_code(tf.name, temp_dir)
-
 
         output = [
             directory
@@ -353,15 +351,12 @@ class CodeAutomationHandler:
         file_list = os.listdir(temp_dir)
         file_list = set(filter(lambda x: x.endswith(".py"), file_list))
         if len(file_list) > 0:
-            #py file exists in code pacakge root dir
+            # py file exists in code pacakge root dir
             origin_dir = os.path.dirname(temp_dir) + '/'
         else:
             file_dir = output[0] if len(output) == 1 else ""
             origin_dir = temp_dir
             temp_dir = temp_dir + file_dir + "/"
-
-        self.handle_ipynb(temp_dir)
-        code_platform = platform_checker.check_from_dir(temp_dir)
 
         # save directory structure
         code_file_json = dir_to_json(temp_dir)
@@ -377,66 +372,10 @@ class CodeAutomationHandler:
             )
             code_structure_dao.insert_one(code_structure_do.__dict__)
 
-        def _compress_tar(file_path):
-            if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
-                with tempfile.TemporaryFile(suffix=".tar.gz") as f:
-                    with tarfile.open(fileobj=f, mode="w:gz", compresslevel=5) as tar:
-                        arcname = os.path.basename(file_path)
-                        print(f"add {file_path} , {arcname}")
-                        tar.add(file_path, arcname=os.path.basename(file_path))
-                    f.flush()
-                    f.seek(0)
-                    logger.info(
-                        f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_key}"
-                    )
-                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
-            elif s3_key.endswith(".zip"):
-                with tempfile.TemporaryFile(suffix=".zip") as f:
-                    with zipfile.ZipFile(f, "w") as zip_file:
-                        dir_name = ""
-                        for root, dir, files in os.walk(file_path):
-                            if len(dir) > 0:
-                                dir_name = dir[0]
-                            for file in files:
-                                zip_file.write(
-                                    os.path.join(root, file),
-                                    arcname=os.path.join(dir_name, file),
-                                )
-                    f.flush()
-                    f.seek(0)
-                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
-
-        # upload origin package with another
-        s3_key_list = s3_key.split('/')
-        filename_list = s3_key_list[1].split('.')
-        filename_list[0] = filename_list[0] + '_origin_package'
-        origin_package_name = '.'.join(filename_list)
-        s3_origin_package_key = '/'.join([s3_key_list[0], origin_package_name])
-
-        with open(tf.name, 'rb') as f:
-            logger.info(
-                f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_origin_package_key}"
-            )
-            aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_origin_package_key)
-
-        try:
-
-            self.insert_code(code_platform, temp_dir)
-            _compress_tar(origin_dir)
-        except DuplicateInjectionError:
-            logger.warning("duplicate injection is forbidded")
-
-        except (CodeNotCompliantException, Exception) as e:
-            logger.error("insert code failed")
-            logger.exception(e)
-            raise e
-
-        code_checker = CodeChecker()
-        self.validate_netmind_interface(code_checker, code_platform, temp_dir)
         shutil.rmtree(temp_dir)
         return {
-            "warn": code_checker.warn,
-            "error": code_checker.error,
+            "warn": [],
+            "error": [],
             "structure": code_structure_do.structure,
         }
 
