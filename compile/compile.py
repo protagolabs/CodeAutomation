@@ -1,16 +1,16 @@
 import os
+import sys
 import uuid
 import json
 
 import boto3
 import subprocess
-import datetime
 
-
-import time
 import logging
-from multipledispatch import dispatch
 from tool import uncompress_code, lambda_invoke
+sys.path.append("..")
+from dynamodb.job_event import job_event_dao, EventLevel
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = False
@@ -20,6 +20,7 @@ region = os.getenv("REGION", "us-west-2")
 domain = os.getenv("DOMAIN", "dev")
 
 s3_client = boto3.client('s3', region_name = region)
+
 LAMBDA_PREPARE_COMPLETE = f'arn:aws:lambda:us-west-2:134622832812:function:netmind-services-job-management-{domain}-trainPreparationComplete'
 
 def validate_status(status, command_rsa_build_client):
@@ -107,18 +108,14 @@ class CodeBuilder:
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={output_file} --output-dir=/tmp"
 
-        try:
 
-            ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
-            endtime = datetime.datetime.now()
-            print(f'command cost : {endtime - starttime}')
+        ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
+        endtime = datetime.datetime.now()
+        print(f'command cost : {endtime - starttime}')
 
-            validate_status(ret.returncode, command_compile_binary_package)
-            logger.info(f'execute command {command_compile_binary_package} finish')
-            logger.info(ret)
-
-        except Exception as e:
-            logger.info(e)
+        validate_status(ret.returncode, command_compile_binary_package)
+        logger.info(f'execute command {command_compile_binary_package} finish')
+        logger.info(ret)
 
         with open(output_file, 'rb') as f:
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
@@ -148,7 +145,11 @@ def handler(event, context):
     job_id = json_body['job_id']
     s3_path = json_body['s3_path']
     entry_point = json_body['entry_point']
-    build = CodeBuilder(job_id, s3_path, entry_point)
-    build.build()
+    try:
+        build = CodeBuilder(job_id, s3_path, entry_point)
+        build.build()
+    except Exception:
+        event_msg = f"compile by event {json_body} failed"
+        job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
 
