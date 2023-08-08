@@ -97,9 +97,10 @@ functions:
             template:
               application/json: '$input.json("$")'
     layers:
-      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer:latest
-      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer:latest
-      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer:latest
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer_${opt:stage}:latest
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:k8s_layer_${opt:stage}:latest
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer_${opt:stage}:latest
+
   compile:
     memorySize: 2048
     image: nuitka_images
@@ -122,6 +123,8 @@ functions:
             Fn::GetAtt:
               - CodeCompileQueue
               - Arn
+    layers:
+      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer_${opt:stage}:latest
 
 resources:
   - Resources:

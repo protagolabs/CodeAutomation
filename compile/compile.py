@@ -4,13 +4,15 @@ import json
 
 import boto3
 import subprocess
-import datetime
 
-
-import time
 import logging
-from multipledispatch import dispatch
-from tool import uncompress_code, lambda_invoke
+from compile.tool import uncompress_code, lambda_invoke
+from dynamodb.job_event import job_event_dao, EventLevel
+try:
+    from Const import JobStatus
+except ModuleNotFoundError:
+    from boto3_layer.python.Const import JobStatus
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = False
@@ -107,18 +109,14 @@ class CodeBuilder:
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={output_file} --output-dir=/tmp"
 
-        try:
 
-            ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
-            endtime = datetime.datetime.now()
-            print(f'command cost : {endtime - starttime}')
+        ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
+        endtime = datetime.datetime.now()
+        print(f'command cost : {endtime - starttime}')
 
-            validate_status(ret.returncode, command_compile_binary_package)
-            logger.info(f'execute command {command_compile_binary_package} finish')
-            logger.info(ret)
-
-        except Exception as e:
-            logger.info(e)
+        validate_status(ret.returncode, command_compile_binary_package)
+        logger.info(f'execute command {command_compile_binary_package} finish')
+        logger.info(ret)
 
         with open(output_file, 'rb') as f:
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
@@ -148,7 +146,11 @@ def handler(event, context):
     job_id = json_body['job_id']
     s3_path = json_body['s3_path']
     entry_point = json_body['entry_point']
-    build = CodeBuilder(job_id, s3_path, entry_point)
-    build.build()
+    try:
+        build = CodeBuilder(job_id, s3_path, entry_point)
+        build.build()
+    except Exception:
+        event_msg = f"compile by event {json_body} failed"
+        job_event_dao.quick_insert(job_id, JobStatus.FAILED, EventLevel.ERROR, event_msg)
 
 
