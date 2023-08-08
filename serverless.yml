@@ -123,8 +123,6 @@ functions:
             Fn::GetAtt:
               - CodeCompileQueue
               - Arn
-    layers:
-      - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:boto3_layer_${opt:stage}:latest
 
 resources:
   - Resources:

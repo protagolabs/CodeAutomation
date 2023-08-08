@@ -1,7 +1,7 @@
 import os
 import uuid
 import boto3
-import datetime
+from datetime import datetime
 
 
 class EventLevel:
@@ -11,11 +11,13 @@ class EventLevel:
 
 domain = os.getenv("DOMAIN", "dev")
 region = os.getenv("REGION", "us-west-2")
+
+session = boto3.Session(region_name=region)
+aws_dynamodb = session.resource("dynamodb")
+
 class JobEventDao():
-
-
     def __init__(self, *args, **kwargs):
-        self.event_table = boto3.client('dynamodb', region_name=region).Table("netmind-job-event-{}".format(domain))
+        self.event_table = aws_dynamodb.Table("netmind-job-event-{}".format(domain))
 
     def before_insert(self, item):
         if "createdAt" not in item or not item["createdAt"]:
