@@ -56,15 +56,26 @@ class CodeBuilder:
             os.makedirs(temp_dir, exist_ok=True)
             uncompress_code(write_obj, temp_dir)
             logger.info(f'uncompress to {temp_dir}')
+
+            output = [
+                directory
+                for directory in os.listdir(temp_dir)
+                if os.path.isdir(os.path.join(temp_dir, directory))
+            ]
+            if len(output) >= 2:
+                if "__MACOSX" in output:
+                    del output[output.index("__MACOSX")]
+
+            file_list = os.listdir(temp_dir)
+            file_list = set(filter(lambda x: x.endswith(".py"), file_list))
+            if len(file_list) == 0:
+                file_dir = output[0] if len(output) == 1 else ""
+                temp_dir = os.path.join(temp_dir, file_dir)
+
+
             compress_dir = temp_dir
 
-            items = os.listdir(temp_dir)
-            logger.info(f'items: {items}')
-            for sub_dir in items:
-                if sub_dir == '__MACOSX':
-                    continue
-                if os.path.isdir(os.path.join(compress_dir, sub_dir)):
-                    temp_dir = os.path.join(temp_dir, sub_dir)
+
 
             logger.info(f'code path : {temp_dir}')
             code_dir = temp_dir
@@ -151,5 +162,6 @@ def handler(event, context):
     except Exception:
         event_msg = f"compile by event {json_body} failed"
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
+
 
 
