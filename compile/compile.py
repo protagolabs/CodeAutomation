@@ -56,7 +56,6 @@ class CodeBuilder:
             os.makedirs(temp_dir, exist_ok=True)
             uncompress_code(write_obj, temp_dir)
             logger.info(f'uncompress to {temp_dir}')
-
             output = [
                 directory
                 for directory in os.listdir(temp_dir)
@@ -72,10 +71,7 @@ class CodeBuilder:
                 file_dir = output[0] if len(output) == 1 else ""
                 temp_dir = os.path.join(temp_dir, file_dir)
 
-
             compress_dir = temp_dir
-
-
 
             logger.info(f'code path : {temp_dir}')
             code_dir = temp_dir
