@@ -179,7 +179,7 @@ def handler(event, context):
 
     message_body = event["Records"][0]["body"]
     json_body = json.loads(message_body)
-    field_list = ['s3_path', 'entry_point', 'job_id']
+    field_list = ['s3_path', 'entry_point', 'job_id', 'arguments']
 
     for field in field_list:
         if field not in json_body:
@@ -187,14 +187,12 @@ def handler(event, context):
     job_id = json_body['job_id']
     s3_path = json_body['s3_path']
     entry_point = json_body['entry_point']
+    arguments = json_body['arguments']
     try:
-        build = CodeBuilder(job_id, s3_path, entry_point)
+        build = CodeBuilder(job_id, s3_path, entry_point, arguments)
         build.build()
     except Exception:
         event_msg = f"compile by event {json_body} failed"
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
 
-if __name__ == '__main__':
-    generator = CodeGenerator(123, "main.py", 'arguments1=1')
-    generator.generate_py_file()
