@@ -31,12 +31,39 @@ def validate_path(path):
     if os.path.exists(path):
         raise FileExistsError(f'path {path} already exists')
 
+
+class CodeGenerator(object):
+
+    def __init__(self, job_id, entry_point, arguments):
+        self.job_id = job_id
+        self.entry_point = entry_point
+        self.arguments = arguments
+
+    def generate_bash_file(self):
+        entry_point_sh_name = f'{self.job_id}.sh'
+        with open(entry_point_sh_name, 'w') as rsh:
+            rsh.write(f"\#! /bin/bash \n python {self.entry_point} {self.arguments}\n")
+
+    def generate_py_file(self):
+        target_py_file_name = f'{self.job_id}.py'
+        with open(target_py_file_name, 'w') as f:
+            f.write(f'import subprocess\n')
+            f.write(f'import os\n')
+            f.write(f'entry_point_sh_name = {self.job_id}.sh\n')
+            #f.write(f"ret = subprocess.run('bash {self.job_id}.sh', shell=True, capture_output=True, encoding='utf-8')\n")
+            f.write(f"os.system('bash {self.job_id}.sh)\n")
+
+    def post_process(self, code_dir):
+        ret = subprocess.run(f'mv {self.job_id}.sh {self.job_id}.py {code_dir}', shell=True, capture_output=True, encoding='utf-8')
+
+
 class CodeBuilder:
-    def __init__(self, job_id, s3_path, entry_point) -> None:
+    def __init__(self, job_id, s3_path, entry_point, arguments) -> None:
         self.job_id = job_id
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
         self.s3_key = s3_path
         self.entry_point_file = entry_point
+        self.code_generator_impl = CodeGenerator(job_id, entry_point, arguments)
 
     def download_code(self):
         compress_dir = ''
@@ -100,6 +127,11 @@ class CodeBuilder:
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
+        #wrap entry point
+        self.code_generator_impl.generate_bash_file()
+        self.code_generator_impl.generate_py_file()
+        self.code_generator_impl.post_process(code_dir)
+
         compile_path = os.path.join(code_dir, '*')
         output_file = os.path.join('/tmp', 'binary_run_file')
 
@@ -107,11 +139,12 @@ class CodeBuilder:
         if not compress_dir and not code_dir:
             raise Exception(f'get code from {self.s3_bucket}:{self.s3_key} failed')
 
-        entry_point = os.path.join(code_dir, self.entry_point_file)
+        #entry_point = os.path.join(code_dir, self.entry_point_file)
 
         import datetime
         starttime = datetime.datetime.now()
-        command_compile_binary_package = f"python -m nuitka --nofollow-imports {entry_point}" \
+        entry_point_wrap_file_path = os.path.join(code_dir, f'{self.job_id}.py')
+        command_compile_binary_package = f"python -m nuitka --nofollow-imports {entry_point_wrap_file_path}" \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={output_file} --output-dir=/tmp"
 
@@ -134,6 +167,8 @@ class CodeBuilder:
         param = {'job_id': self.job_id}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
         lambda_invoke(LAMBDA_PREPARE_COMPLETE,  param)
+
+
 
 
 
@@ -160,4 +195,6 @@ def handler(event, context):
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
 
-
+if __name__ == '__main__':
+    generator = CodeGenerator(123, "main.py", 'arguments1=1')
+    generator.generate_py_file()
