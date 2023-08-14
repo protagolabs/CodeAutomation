@@ -179,7 +179,7 @@ def handler(event, context):
 
     message_body = event["Records"][0]["body"]
     json_body = json.loads(message_body)
-    field_list = ['s3_path', 'entry_point', 'job_id', 'arguments']
+    field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
     for field in field_list:
         if field not in json_body:
@@ -187,9 +187,9 @@ def handler(event, context):
     job_id = json_body['job_id']
     s3_path = json_body['s3_path']
     entry_point = json_body['entry_point']
-    arguments = json_body['arguments']
+    train_arguments = json_body['train_arguments']
     try:
-        build = CodeBuilder(job_id, s3_path, entry_point, arguments)
+        build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
     except Exception:
         event_msg = f"compile by event {json_body} failed"
