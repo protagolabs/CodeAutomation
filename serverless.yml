@@ -102,9 +102,9 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer_${opt:stage}:latest
 
   compile:
-    memorySize: 2048
+    memorySize: 4096
     image: nuitka_images
-    timeout: 30
+    timeout: 40
     environment:
       DOMAIN: ${opt:stage}
       REGION: ${opt:region}

@@ -5,6 +5,7 @@ import json
 
 import boto3
 import subprocess
+import datetime
 
 import logging
 from tool import uncompress_code, lambda_invoke
@@ -34,13 +35,9 @@ def validate_path(path):
 
 class CodeGenerator(object):
 
-    def __init__(self, job_id, entry_point, arguments, code_dir):
+    def __init__(self, job_id, arguments, code_dir):
         self.job_id = job_id
         self.code_dir = code_dir
-        #self.entry_point = os.path.join(self.code_dir, entry_point)
-        self.abs_entry_point_path = os.path.join(self.code_dir, entry_point)
-
-        self.entry_point_sh_name = os.path.join(self.code_dir, f'{self.job_id}.sh')
         self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
         self.arguments = arguments
 
@@ -50,17 +47,14 @@ class CodeGenerator(object):
 
             #f.write("#! /bin/bash \n python {self.entry_point} {self.arguments}\n")
             f.write(f"#! /bin/bash \npython {self.entry_point} {self.arguments}\n")
-    """      
+    """
 
-    def generate_py_file(self):
+    def generate_py_file(self, unwrapped_binary_file):
         with open(self.target_py_file_name, 'w') as f:
             f.write(f'import os\n')
-            #f.write(f"ret = subprocess.run('bash {self.job_id}.sh', shell=True, capture_output=True, encoding='utf-8')\n")
-            #f.write(f"os.system('bash {self.entry_point_sh_name}')\n")
-            f.write(f"os.system('python {self.abs_entry_point_path} {self.arguments}')\n")
+            f.write(f"os.system('./unwrapped_binary_file {self.arguments}')\n")
 
-    #def post_process(self, code_dir):
-    #    ret = subprocess.run(f'mv {self.job_id}.sh {self.job_id}.py {code_dir}', shell=True, capture_output=True, encoding='utf-8')
+
 
 
 class CodeBuilder:
@@ -128,55 +122,62 @@ class CodeBuilder:
         return compress_dir, code_dir
 
 
+    def __execute_command(self, command):
+        ret = subprocess.run(command, shell=True, capture_output=False,
+                             encoding='utf-8', timeout=50, check=True)
+        validate_status(ret.returncode, command)
+        return
+
     def build(self):
         compress_dir, code_dir = self.download_code()
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
-        #wrap entry point
-        code_generator_impl = CodeGenerator(self.job_id, self.entry_point_file, self.arguments, code_dir)
-        #code_generator_impl.generate_bash_file()
-        code_generator_impl.generate_py_file()
-        #code_generator_impl.post_process()
 
         compile_path = os.path.join(code_dir, '*')
-        output_file = os.path.join('/tmp', 'binary_run_file')
-
-
+        unwrapped_binary_file = os.path.join('/tmp','unwrapped_binary_file')
         if not compress_dir and not code_dir:
             raise Exception(f'get code from {self.s3_bucket}:{self.s3_key} failed')
 
         #entry_point = os.path.join(code_dir, self.entry_point_file)
 
-        import datetime
         starttime = datetime.datetime.now()
-        entry_point_wrap_file_path = os.path.join(code_dir, f'{self.job_id}.py')
-        command_compile_binary_package = f"python -m nuitka --nofollow-imports {entry_point_wrap_file_path}" \
+        entry_point_file = os.path.join(code_dir, self.entry_point_file)
+        command_compile_unwrapped_binary_package = f"python -m nuitka --nofollow-imports {entry_point_file}" \
                                          f" --include-plugin-files={compile_path} " \
-                                         f"--output-filename={output_file} --output-dir=/tmp"
+                                         f"--output-filename={unwrapped_binary_file} --output-dir=/tmp --remove-output"
 
+        self.__execute_command(command_compile_unwrapped_binary_package)
+        logger.info(f'execute command {command_compile_unwrapped_binary_package} finish')
 
-        ret = subprocess.run(command_compile_binary_package, shell=True, capture_output=False, encoding='utf-8', timeout=50, check=True)
+        # wrap entry point
+        code_generator_impl = CodeGenerator(self.job_id, self.arguments, code_dir)
+        code_generator_impl.generate_py_file(unwrapped_binary_file)
+
+        binary_run_file = os.path.join('/tmp','binary_run_file')
+        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
+                                                   f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
+        self.__execute_command(command_compile_binary_package)
+        logger.info(f'execute command {command_compile_binary_package} finish')
+
         endtime = datetime.datetime.now()
         print(f'command cost : {endtime - starttime}')
 
-        validate_status(ret.returncode, command_compile_binary_package)
-        logger.info(f'execute command {command_compile_binary_package} finish')
-        logger.info(ret)
 
-        with open(output_file, 'rb') as f:
+
+
+        with open(unwrapped_binary_file, 'rb') as f_unwrapped, open(binary_run_file, 'rb') as f_binary:
+            unwrapped_key = os.path.join(self.s3_key.split('/')[0], 'unwrapped_binary_file')
+            s3_client.upload_fileobj(f_unwrapped, self.s3_bucket, unwrapped_key)
+
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
+            s3_client.upload_fileobj(f_binary, self.s3_bucket, binary_key)
 
-            s3_client.upload_fileobj(f, self.s3_bucket, binary_key)
-
-        ret = subprocess.run(f"rm -rf {compress_dir}", shell=True, capture_output=True, encoding='utf-8')
+        ret = subprocess.run(f"rm -rf {compress_dir} ", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove_dir : {compress_dir}')
         param = {'job_id': self.job_id}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
         lambda_invoke(LAMBDA_PREPARE_COMPLETE,  param)
-
-
-
 
 
 def handler(event, context):
@@ -185,6 +186,8 @@ def handler(event, context):
         raise ValueError(f'invalid format {event}')
 
     message_body = event["Records"][0]["body"]
+
+
     json_body = json.loads(message_body)
     field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
@@ -216,6 +219,7 @@ if __name__ == '__main__':
                 'entry_point': 'train_netmind.py',
                 'train_arguments': '--model_name_or_path=resnet50'
         }}]
-} 
+}
     handler(event, None)
 """
+
