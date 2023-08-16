@@ -34,27 +34,33 @@ def validate_path(path):
 
 class CodeGenerator(object):
 
-    def __init__(self, job_id, entry_point, arguments):
+    def __init__(self, job_id, entry_point, arguments, code_dir):
         self.job_id = job_id
-        self.entry_point = entry_point
+        self.code_dir = code_dir
+        #self.entry_point = os.path.join(self.code_dir, entry_point)
+        self.abs_entry_point_path = os.path.join(self.code_dir, entry_point)
+
+        self.entry_point_sh_name = os.path.join(self.code_dir, f'{self.job_id}.sh')
+        self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
         self.arguments = arguments
 
+    """
     def generate_bash_file(self):
-        entry_point_sh_name = f'{self.job_id}.sh'
-        with open(entry_point_sh_name, 'w') as rsh:
-            rsh.write(f"\#! /bin/bash \n python {self.entry_point} {self.arguments}\n")
+        with open(self.entry_point_sh_name, 'w') as f:
+
+            #f.write("#! /bin/bash \n python {self.entry_point} {self.arguments}\n")
+            f.write(f"#! /bin/bash \npython {self.entry_point} {self.arguments}\n")
+    """      
 
     def generate_py_file(self):
-        target_py_file_name = f'{self.job_id}.py'
-        with open(target_py_file_name, 'w') as f:
-            f.write(f'import subprocess\n')
+        with open(self.target_py_file_name, 'w') as f:
             f.write(f'import os\n')
-            f.write(f'entry_point_sh_name = {self.job_id}.sh\n')
             #f.write(f"ret = subprocess.run('bash {self.job_id}.sh', shell=True, capture_output=True, encoding='utf-8')\n")
-            f.write(f"os.system('bash {self.job_id}.sh)\n")
+            #f.write(f"os.system('bash {self.entry_point_sh_name}')\n")
+            f.write(f"os.system('python {self.abs_entry_point_path} {self.arguments}')\n")
 
-    def post_process(self, code_dir):
-        ret = subprocess.run(f'mv {self.job_id}.sh {self.job_id}.py {code_dir}', shell=True, capture_output=True, encoding='utf-8')
+    #def post_process(self, code_dir):
+    #    ret = subprocess.run(f'mv {self.job_id}.sh {self.job_id}.py {code_dir}', shell=True, capture_output=True, encoding='utf-8')
 
 
 class CodeBuilder:
@@ -63,7 +69,7 @@ class CodeBuilder:
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
         self.s3_key = s3_path
         self.entry_point_file = entry_point
-        self.code_generator_impl = CodeGenerator(job_id, entry_point, arguments)
+        self.arguments = arguments
 
     def download_code(self):
         compress_dir = ''
@@ -128,9 +134,10 @@ class CodeBuilder:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
         #wrap entry point
-        self.code_generator_impl.generate_bash_file()
-        self.code_generator_impl.generate_py_file()
-        self.code_generator_impl.post_process(code_dir)
+        code_generator_impl = CodeGenerator(self.job_id, self.entry_point_file, self.arguments, code_dir)
+        #code_generator_impl.generate_bash_file()
+        code_generator_impl.generate_py_file()
+        #code_generator_impl.post_process()
 
         compile_path = os.path.join(code_dir, '*')
         output_file = os.path.join('/tmp', 'binary_run_file')
@@ -191,8 +198,24 @@ def handler(event, context):
     try:
         build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
-    except Exception:
-        event_msg = f"compile by event {json_body} failed"
+    except Exception as e:
+        #event_msg = f"compile by event {json_body} failed"
+        event_msg = str(e)
+        print(event_msg)
+        import  traceback
+        traceback.print_exc()
+
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
-
+"""
+if __name__ == '__main__':
+    event = {
+        'Records': [{'body': {
+                'job_id': '8c2eba07-8d86-4f46-80f8-da0d76b35adc',
+                's3_path': 'a45babc9-0495-4356-a8c2-27cea80666a7/tf-resnet-custom-automated.tar.gz',
+                'entry_point': 'train_netmind.py',
+                'train_arguments': '--model_name_or_path=resnet50'
+        }}]
+} 
+    handler(event, None)
+"""
