@@ -41,18 +41,25 @@ class CodeGenerator(object):
         self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
         self.arguments = arguments
 
-    """
-    def generate_bash_file(self):
-        with open(self.entry_point_sh_name, 'w') as f:
 
-            #f.write("#! /bin/bash \n python {self.entry_point} {self.arguments}\n")
-            f.write(f"#! /bin/bash \npython {self.entry_point} {self.arguments}\n")
-    """
-
-    def generate_py_file(self, unwrapped_binary_file):
+    def generate_py_file(self, exist_main_function, arguments, entry_point_file):
+        argument_list = arguments.split(' ')
+        str_argument_list = [' ']
+        for argument in argument_list:
+            str_argument_list.append(str(argument))
+        command_argv = f'sys.argv = {str_argument_list}'
+        entry_point_module_name = entry_point_file.split('.')[0]
         with open(self.target_py_file_name, 'w') as f:
             f.write(f'import os\n')
-            f.write(f"os.system('./unwrapped_binary_file {self.arguments}')\n")
+            f.write(f'import sys\n')
+            f.write(f'{command_argv}\n')
+            f.write(f'import {entry_point_module_name}\n')
+            if exist_main_function:
+                f.write(f'{entry_point_module_name}.entry()\n')
+        with open(self.target_py_file_name, 'r') as f:
+            content = f.read()
+            print(f'content of {self.target_py_file_name}: {content}')
+
 
 
 
@@ -64,6 +71,23 @@ class CodeBuilder:
         self.s3_key = s3_path
         self.entry_point_file = entry_point
         self.arguments = arguments
+
+    def handle_entry_point(self, code_dir):
+        exist_pattern = False
+        entry_point_file = os.path.join(code_dir, self.entry_point_file)
+        with open(entry_point_file, 'r+') as f:
+            pattern = "if __name__ == \'__main__\':"
+            lines = f.readlines()
+            f.truncate(0)
+            for index, line in enumerate(lines):
+                if lines[index].startswith(pattern):
+                    exist_pattern = True
+                    print(f'{pattern} exist in {lines[index]}')
+                    lines[index] = lines[index].replace(pattern, "def entry():")
+                    break
+            f.seek(0)
+            f.writelines(lines)
+        return exist_pattern
 
     def download_code(self):
         compress_dir = ''
@@ -133,6 +157,8 @@ class CodeBuilder:
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
+        exist_main_function = self.handle_entry_point(code_dir)
+
 
         compile_path = os.path.join(code_dir, '*')
         unwrapped_binary_file = os.path.join('/tmp','unwrapped_binary_file')
@@ -152,11 +178,13 @@ class CodeBuilder:
 
         # wrap entry point
         code_generator_impl = CodeGenerator(self.job_id, self.arguments, code_dir)
-        code_generator_impl.generate_py_file(unwrapped_binary_file)
+        code_generator_impl.generate_py_file(exist_main_function, self.arguments, self.entry_point_file)
+
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
         command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
-                                                   f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
+                                         f" --include-plugin-files={compile_path} " \
+                                         f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
         self.__execute_command(command_compile_binary_package)
         logger.info(f'execute command {command_compile_binary_package} finish')
 
@@ -187,7 +215,6 @@ def handler(event, context):
 
     message_body = event["Records"][0]["body"]
 
-
     json_body = json.loads(message_body)
     field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
@@ -210,7 +237,7 @@ def handler(event, context):
 
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
 
-"""
+
 if __name__ == '__main__':
     event = {
         'Records': [{'body': {
@@ -221,5 +248,6 @@ if __name__ == '__main__':
         }}]
 }
     handler(event, None)
-"""
+
+
 
