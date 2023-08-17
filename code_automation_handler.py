@@ -481,6 +481,7 @@ class CodeAutomationHandler:
             origin_dir = temp_dir
             temp_dir = temp_dir + file_dir + "/"
 
+        self.handle_ipynb(temp_dir)
         # save directory structure
         code_file_json = dir_to_json(temp_dir)
         try:
@@ -494,6 +495,43 @@ class CodeAutomationHandler:
                 str(uuid.uuid4()), s3_key, json.dumps(code_file_json), FileLoc.S3
             )
             code_structure_dao.insert_one(code_structure_do.__dict__)
+
+        def _compress_tar(file_path):
+            if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
+                with tempfile.TemporaryFile(suffix=".tar.gz") as f:
+                    with tarfile.open(fileobj=f, mode="w:gz", compresslevel=5) as tar:
+                        arcname = os.path.basename(file_path)
+                        print(f"add {file_path} , {arcname}")
+                        tar.add(file_path, arcname=os.path.basename(file_path))
+                    f.flush()
+                    f.seek(0)
+                    logger.info(
+                        f"s3_put_by_tmp by {AwsS3.S3_JOB_MODEL_CODE_BUCKET}, {s3_key}"
+                    )
+                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+            elif s3_key.endswith(".zip"):
+                with tempfile.TemporaryFile(suffix=".zip") as f:
+                    with zipfile.ZipFile(f, "w") as zip_file:
+                        dir_name = ""
+                        for root, dir, files in os.walk(file_path):
+                            if len(dir) > 0:
+                                dir_name = dir[0]
+                            for file in files:
+                                zip_file.write(
+                                    os.path.join(root, file),
+                                    arcname=os.path.join(dir_name, file),
+                                )
+                    f.flush()
+                    f.seek(0)
+                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+
+        # upload origin package with another
+        s3_key_list = s3_key.split('/')
+        filename_list = s3_key_list[1].split('.')
+        filename_list[0] = filename_list[0] + '_origin_package'
+
+
+        _compress_tar(origin_dir)
 
         shutil.rmtree(temp_dir)
         return {
