@@ -161,20 +161,13 @@ class CodeBuilder:
 
 
         compile_path = os.path.join(code_dir, '*')
-        unwrapped_binary_file = os.path.join('/tmp','unwrapped_binary_file')
         if not compress_dir and not code_dir:
             raise Exception(f'get code from {self.s3_bucket}:{self.s3_key} failed')
 
-        #entry_point = os.path.join(code_dir, self.entry_point_file)
 
         starttime = datetime.datetime.now()
         entry_point_file = os.path.join(code_dir, self.entry_point_file)
-        command_compile_unwrapped_binary_package = f"python -m nuitka --nofollow-imports {entry_point_file}" \
-                                         f" --include-plugin-files={compile_path} " \
-                                         f"--output-filename={unwrapped_binary_file} --output-dir=/tmp --remove-output"
 
-        self.__execute_command(command_compile_unwrapped_binary_package)
-        logger.info(f'execute command {command_compile_unwrapped_binary_package} finish')
 
         # wrap entry point
         code_generator_impl = CodeGenerator(self.job_id, self.arguments, code_dir)
@@ -194,9 +187,7 @@ class CodeBuilder:
 
 
 
-        with open(unwrapped_binary_file, 'rb') as f_unwrapped, open(binary_run_file, 'rb') as f_binary:
-            unwrapped_key = os.path.join(self.s3_key.split('/')[0], 'unwrapped_binary_file')
-            s3_client.upload_fileobj(f_unwrapped, self.s3_bucket, unwrapped_key)
+        with open(binary_run_file, 'rb') as f_binary:
 
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
             s3_client.upload_fileobj(f_binary, self.s3_bucket, binary_key)
@@ -215,7 +206,8 @@ def handler(event, context):
 
     message_body = event["Records"][0]["body"]
 
-    json_body = json.loads(message_body)
+    #json_body = json.loads(message_body)
+    json_body = message_body
     field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
     for field in field_list:
@@ -229,10 +221,9 @@ def handler(event, context):
         build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
     except Exception as e:
-        #event_msg = f"compile by event {json_body} failed"
         event_msg = str(e)
         print(event_msg)
-        import  traceback
+        import traceback
         traceback.print_exc()
 
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
