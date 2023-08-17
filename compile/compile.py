@@ -206,8 +206,7 @@ def handler(event, context):
 
     message_body = event["Records"][0]["body"]
 
-    #json_body = json.loads(message_body)
-    json_body = message_body
+    json_body = json.loads(message_body)
     field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
     for field in field_list:
