@@ -299,6 +299,15 @@ class CodeAutomationHandler:
 
         return
 
+    def remove_prefix(self, line, character_list):
+        exist = False
+        for character in character_list:
+            if line.lstrip().startswith(character):
+                exist = True
+                line = line.lstrip(character).strip()
+        if exist:
+            line = f'os.system(\'{line}\')\n'
+        return line
     def handle_ipynb(self, temp_dir):
         for root, dirs, files in os.walk(temp_dir):
             for file in files:
@@ -310,10 +319,7 @@ class CodeAutomationHandler:
                         for cell in code["cells"]:
                             if cell["cell_type"] == "code":
                                 for line in cell["source"]:
-                                    if line.lstrip().startswith(
-                                            "!"
-                                    ) or line.lstrip().startswith("！"):
-                                        continue
+                                    line = self.remove_prefix(line, ["!", "！"])
                                     py_file.write(line)
                                 py_file.write("\n")
                     os.system(f"rm {path}")
