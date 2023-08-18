@@ -538,6 +538,7 @@ class CodeAutomationHandler:
 
 
         _compress_tar(origin_dir)
+        logger.info(f'package already upload to {AwsS3.S3_JOB_MODEL_CODE_BUCKET} {s3_key}')
 
         shutil.rmtree(temp_dir)
         return {
