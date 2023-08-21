@@ -68,6 +68,8 @@ class CodeBuilder:
     def __init__(self, job_id, s3_path, entry_point, arguments) -> None:
         self.job_id = job_id
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
+        if s3_path.endswith("ipynb"):
+            s3_path = ''.join(s3_path.split('.')[0], '.py')
         self.s3_key = s3_path
         self.entry_point_file = entry_point
         self.arguments = arguments
@@ -118,9 +120,11 @@ class CodeBuilder:
 
             file_list = os.listdir(temp_dir)
             file_list = set(filter(lambda x: x.endswith(".py"), file_list))
-            if len(file_list) == 0:
-                file_dir = output[0] if len(output) == 1 else ""
-                temp_dir = os.path.join(temp_dir, file_dir)
+            ipynb_list = set(filter(lambda x: x.endswith(".ipynb"), file_list))
+            if len(ipynb_list) == 0 and len(file_list) == 0:
+                file_dir = output[0] if len(output) == 1 else None
+                if file_dir:
+                    temp_dir = os.path.join(temp_dir, file_dir)
 
             compress_dir = temp_dir
 
