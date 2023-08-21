@@ -55,16 +55,7 @@ class CodeChecker(AstChecker):
         self.warn.clear()
         self.error.clear()
 
-    def ast_nodes_from_s3(self, model_code_s3_key):
-        temp_dir = "/tmp/" + str(uuid4())
-        os.makedirs(temp_dir, exist_ok=True)
-        tf = aws.s3_download_to_tempfile(
-            AwsS3.S3_JOB_MODEL_CODE_BUCKET, model_code_s3_key
-        )
-        uncompress_code(model_code_s3_key, tf.name, temp_dir)
-        ast_nodes = self.ast_nodes_from_dir(temp_dir)
-        shutil.rmtree(temp_dir)
-        return ast_nodes
+
 
     def ast_nodes_from_dir(self, temp_dir, platform):
         file_list = os.listdir(temp_dir)

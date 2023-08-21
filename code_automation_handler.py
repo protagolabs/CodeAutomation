@@ -466,10 +466,15 @@ class CodeAutomationHandler:
         temp_dir = "/tmp/" + str(uuid4())
         os.makedirs(temp_dir, exist_ok=True)
         logger.info(f"downloading {AwsS3.S3_JOB_MODEL_CODE_BUCKET} by key : {s3_key}")
-        tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
 
-
-        uncompress_code(s3_key, tf.name, temp_dir)
+        tf = None
+        if s3_key.endswith('.tar') or s3_key.endswith('.tar.gz') or s3_key.endswith('.zip'):
+            tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+            uncompress_code(tf.name, temp_dir)
+        elif s3_key.endswith('ipynb'):
+            target_file_name = s3_key.split('/')[1].split('.')[0] + '.py'
+            tf = open(os.path.join(temp_dir, target_file_name), 'wb')
+            aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
 
         output = [
             directory
@@ -640,9 +645,9 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
-                #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/05363921-9a91-4083-9e9f-f597472b66ca/codelab_tf_custom_resnet.ipynb"
-                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
+                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/05363921-9a91-4083-9e9f-f597472b66ca/codelab_tf_custom_resnet.ipynb"
+                #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
+                #          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
     }
 

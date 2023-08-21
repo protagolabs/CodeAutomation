@@ -73,17 +73,6 @@ class PlatformChecker(AstChecker):
         #self.legal_intersection = self.tf_legal_file_name_set & self.torch_legal_file_name_set
 
 
-    def check_from_s3(self, model_code_s3_key):
-        temp_dir = "/tmp/" + str(uuid4())
-        os.makedirs(temp_dir, exist_ok=True)
-        tf = aws.s3_download_to_tempfile(
-            AwsS3.S3_JOB_MODEL_CODE_BUCKET, model_code_s3_key
-        )
-        uncompress_code(model_code_s3_key, tf.name, temp_dir)
-        code_platform = self.check_from_dir(temp_dir)
-        shutil.rmtree(temp_dir)
-        return code_platform
-
     def check_from_dir(self, temp_dir):
         pytorch_checker = ModuleReferenceChecker("torch")
         tensorflow_checker = ModuleReferenceChecker("tensorflow")
