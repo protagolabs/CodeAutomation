@@ -61,7 +61,7 @@ class CodeChecker(AstChecker):
         tf = aws.s3_download_to_tempfile(
             AwsS3.S3_JOB_MODEL_CODE_BUCKET, model_code_s3_key
         )
-        uncompress_code(tf.name, temp_dir)
+        uncompress_code(model_code_s3_key, tf.name, temp_dir)
         ast_nodes = self.ast_nodes_from_dir(temp_dir)
         shutil.rmtree(temp_dir)
         return ast_nodes

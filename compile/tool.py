@@ -35,27 +35,16 @@ def _uncompress_tar(file_path, dest):
         tar.extract(code_file, dest)
 
 
-def uncompress_code(file_path, dest):
-    if file_path.endswith(".zip"):
+def uncompress_code(suffix_name, file_path, dest):
+
+    if suffix_name.endswith(".zip"):
         _uncompress_zip(file_path, dest)
 
-    elif file_path.endswith(".tar") or file_path.endswith(".tar.gz"):
+    elif suffix_name.endswith(".tar") or suffix_name.endswith(".tar.gz"):
         _uncompress_tar(file_path, dest)
-        """
-        try:
-            _uncompress_zip(file_path, dest)
-            return
-        except Exception:
-            pass
-
-        try:
-            _uncompress_tar(file_path, dest)
-            return
-        except Exception:
-            pass
-
-        raise Exception(f"Unsupported compression type [{file_path}]")
-        """
+    else:
+        file_name = suffix_name.split('/')[1]
+        os.system(f'cp {file_path} {os.path.join(dest, file_name)}')
 
 
 def lambda_auth():

@@ -105,7 +105,7 @@ class CodeBuilder:
 
             temp_dir = "/tmp/" + str(uuid.uuid4())
             os.makedirs(temp_dir, exist_ok=True)
-            uncompress_code(write_obj, temp_dir)
+            uncompress_code(self.s3_key, write_obj, temp_dir)
             logger.info(f'uncompress to {temp_dir}')
             output = [
                 directory

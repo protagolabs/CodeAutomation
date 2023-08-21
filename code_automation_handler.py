@@ -54,15 +54,17 @@ except ModuleNotFoundError:
     from webkit_layer.python.service.Web3Service import JobType, web3_service
     from webkit_layer.python.utils.Tools import dir_to_json, todict, uncompress_code
 
-from common.bean.domain.CodeStructureDo import CodeStructureDo
-from common.dao.CodeStructureDao import code_structure_dao
 
-from common.JobConst import (
+from automation_common.bean.domain.CodeStructureDo import CodeStructureDo
+from automation_common.dao.CodeStructureDao import code_structure_dao
+
+from automation_common.JobConst import (
     FileLoc,
     Regex,
 
 )
-from common.Messages import msg
+
+from automation_common.Messages import msg
 from auto_complete.hivemind_mlm_handler import (
     HivemindCallbackMonitorHandler,
     hm_mlm_callback_code_injection_list,
@@ -466,7 +468,8 @@ class CodeAutomationHandler:
         logger.info(f"downloading {AwsS3.S3_JOB_MODEL_CODE_BUCKET} by key : {s3_key}")
         tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
 
-        uncompress_code(tf.name, temp_dir)
+
+        uncompress_code(s3_key, tf.name, temp_dir)
 
         output = [
             directory
@@ -480,13 +483,15 @@ class CodeAutomationHandler:
         temp_dir += '/'
         file_list = os.listdir(temp_dir)
         file_list = set(filter(lambda x: x.endswith(".py"), file_list))
-        if len(file_list) > 0:
+        ipynb_list = set(filter(lambda x: x.endswith(".ipynb"), file_list))
+        origin_dir = temp_dir
+        if len(ipynb_list) == 0 and len(file_list) == 0:
             # py file exists in code pacakge root dir
-            origin_dir = os.path.dirname(temp_dir) + '/'
-        else:
-            file_dir = output[0] if len(output) == 1 else ""
-            origin_dir = temp_dir
-            temp_dir = temp_dir + file_dir + "/"
+            file_dir = output[0] if len(output) == 1 else None
+            if file_dir:
+                temp_dir = os.path.join(temp_dir, file_dir)
+
+
 
         self.handle_ipynb(temp_dir)
         # save directory structure
@@ -503,13 +508,13 @@ class CodeAutomationHandler:
             )
             code_structure_dao.insert_one(code_structure_do.__dict__)
 
-        def _compress_tar(file_path):
+        def _compress_tar(dir_path):
             if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
                 with tempfile.TemporaryFile(suffix=".tar.gz") as f:
                     with tarfile.open(fileobj=f, mode="w:gz", compresslevel=5) as tar:
-                        arcname = os.path.basename(file_path)
-                        print(f"add {file_path} , {arcname}")
-                        tar.add(file_path, arcname=os.path.basename(file_path))
+                        arcname = os.path.basename(dir_path)
+                        logger.info(f"add {dir_path} , {arcname}")
+                        tar.add(dir_path, arcname=os.path.basename(dir_path))
                     f.flush()
                     f.seek(0)
                     logger.info(
@@ -520,7 +525,7 @@ class CodeAutomationHandler:
                 with tempfile.TemporaryFile(suffix=".zip") as f:
                     with zipfile.ZipFile(f, "w") as zip_file:
                         dir_name = ""
-                        for root, dir, files in os.walk(file_path):
+                        for root, dir, files in os.walk(dir_path):
                             if len(dir) > 0:
                                 dir_name = dir[0]
                             for file in files:
@@ -531,6 +536,12 @@ class CodeAutomationHandler:
                     f.flush()
                     f.seek(0)
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
+            elif s3_key.endswith(".ipynb"):
+                py_key = s3_key.split('.')[0] + '.py'
+                file_path = os.path.join(dir_path, py_key.split('/')[1])
+                logger.info(f'push {AwsS3.S3_JOB_MODEL_CODE_BUCKET}:{py_key}')
+                with open(file_path, 'rb') as f:
+                    aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, py_key)
 
         # upload origin package with another
         s3_key_list = s3_key.split('/')
@@ -629,8 +640,9 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
+                #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/05363921-9a91-4083-9e9f-f597472b66ca/codelab_tf_custom_resnet.ipynb"
                 "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                             "04b64bb2-6edd-43a1-bc43-65e6a186598d/torch_mlm_transformers_trainer_raw_bert.tar.gz"
+                          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
     }
 
