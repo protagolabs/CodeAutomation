@@ -316,6 +316,7 @@ class CodeAutomationHandler:
                     code = json.load(open(path))
                     target_file = os.path.join(temp_dir, file.split(".")[0] + ".py")
                     with open(target_file, "w+") as py_file:
+                        py_file.write('import os\n')
                         for cell in code["cells"]:
                             if cell["cell_type"] == "code":
                                 for line in cell["source"]:

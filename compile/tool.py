@@ -41,7 +41,7 @@ def uncompress_code(file_path, dest):
 
     elif file_path.endswith(".tar") or file_path.endswith(".tar.gz"):
         _uncompress_tar(file_path, dest)
-    else:
+        """
         try:
             _uncompress_zip(file_path, dest)
             return
@@ -55,6 +55,8 @@ def uncompress_code(file_path, dest):
             pass
 
         raise Exception(f"Unsupported compression type [{file_path}]")
+        """
+
 
 def lambda_auth():
     return {"uid": "netmind"}
