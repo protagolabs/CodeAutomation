@@ -308,7 +308,7 @@ class CodeAutomationHandler:
                 exist = True
                 line = line.lstrip(character).strip()
         if exist:
-            line = f'os.system(\'{line}\')\n'
+            line = f'os.system(\'{line} > /dev/null \')\n'
         return line
     def handle_ipynb(self, temp_dir):
         for root, dirs, files in os.walk(temp_dir):
@@ -472,9 +472,10 @@ class CodeAutomationHandler:
             tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             uncompress_code(tf.name, temp_dir)
         elif s3_key.endswith('ipynb'):
-            target_file_name = s3_key.split('/')[1].split('.')[0] + '.py'
-            tf = open(os.path.join(temp_dir, target_file_name), 'wb')
-            aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
+            target_file_name = s3_key.split('/')[1]
+            with open(os.path.join(temp_dir, target_file_name), 'wb') as tf:
+                aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
+            
 
         output = [
             directory
@@ -547,6 +548,7 @@ class CodeAutomationHandler:
                 logger.info(f'push {AwsS3.S3_JOB_MODEL_CODE_BUCKET}:{py_key}')
                 with open(file_path, 'rb') as f:
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, py_key)
+                os.system(f'rm {file_path}')
 
         # upload origin package with another
         s3_key_list = s3_key.split('/')

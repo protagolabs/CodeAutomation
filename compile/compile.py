@@ -69,7 +69,7 @@ class CodeBuilder:
         self.job_id = job_id
         self.s3_bucket = f'protagolabs-netmind-job-model-code-{domain}'
         if s3_path.endswith("ipynb"):
-            s3_path = ''.join(s3_path.split('.')[0], '.py')
+            s3_path = ''.join([s3_path.split('.')[0], '.py'])
         self.s3_key = s3_path
         self.entry_point_file = entry_point
         self.arguments = arguments
