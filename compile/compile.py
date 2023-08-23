@@ -71,6 +71,8 @@ class CodeBuilder:
         if s3_path.endswith("ipynb"):
             s3_path = ''.join([s3_path.split('.')[0], '.py'])
         self.s3_key = s3_path
+        if entry_point.endswith('.ipynb'):
+            entry_point = ''.join([entry_point.split('.')[0], '.py'])
         self.entry_point_file = entry_point
         self.arguments = arguments
 

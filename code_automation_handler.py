@@ -499,7 +499,6 @@ class CodeAutomationHandler:
 
 
 
-        self.handle_ipynb(temp_dir)
         # save directory structure
         code_file_json = dir_to_json(temp_dir)
         try:
@@ -513,6 +512,7 @@ class CodeAutomationHandler:
                 str(uuid.uuid4()), s3_key, json.dumps(code_file_json), FileLoc.S3
             )
             code_structure_dao.insert_one(code_structure_do.__dict__)
+        self.handle_ipynb(temp_dir)
 
         def _compress_tar(dir_path):
             if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
