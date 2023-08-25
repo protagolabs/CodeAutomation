@@ -8,7 +8,7 @@ import subprocess
 import datetime
 
 import logging
-from tool import uncompress_code, lambda_invoke
+from tool import uncompress_code, lambda_invoke, get_transformed_entry_file_name
 sys.path.append("..")
 from dynamodb.job_event import job_event_dao, EventLevel
 
@@ -103,12 +103,17 @@ class CodeBuilder:
             os.makedirs(temp_dir, exist_ok=True)
 
             file_name = self.s3_key.split('/')[1]
-            write_obj = os.path.join('/tmp', file_name)
+            download_file_dir = os.path.join('/tmp', 'download_file')
+            os.makedirs(download_file_dir, exist_ok=True)
+            write_obj = os.path.join(download_file_dir, file_name)
 
             logger.info(f'download {self.s3_bucket}, {self.s3_key} to {write_obj}')
             s3_client.download_file( self.s3_bucket, self.s3_key, write_obj)
 
-            uncompress_code(self.s3_key, write_obj, temp_dir)
+
+            final_file_name = uncompress_code(self.s3_key, write_obj, temp_dir)
+            if final_file_name:
+                self.entry_point_file = final_file_name
 
             logger.info(f'uncompress to {temp_dir}')
             output = [
@@ -143,9 +148,9 @@ class CodeBuilder:
 
         except Exception as e:
             logger.exception(e)
-            return None, None, None
+            return None, None
 
-        return compress_dir, code_dir, write_obj
+        return compress_dir, code_dir
 
 
     def __execute_command(self, command):
@@ -155,7 +160,7 @@ class CodeBuilder:
         return
 
     def build(self):
-        compress_dir, code_dir, write_obj = self.download_code()
+        compress_dir, code_dir = self.download_code()
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
@@ -168,8 +173,6 @@ class CodeBuilder:
 
 
         starttime = datetime.datetime.now()
-        entry_point_file = os.path.join(code_dir, self.entry_point_file)
-
 
         # wrap entry point
         code_generator_impl = CodeGenerator(self.job_id, self.arguments, code_dir)
@@ -186,9 +189,6 @@ class CodeBuilder:
         endtime = datetime.datetime.now()
         print(f'command cost : {endtime - starttime}')
 
-
-
-
         with open(binary_run_file, 'rb') as f_binary:
 
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
@@ -196,8 +196,6 @@ class CodeBuilder:
 
         ret = subprocess.run(f"rm -rf {compress_dir} ", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove_dir : {compress_dir}')
-        ret = subprocess.run(f"rm -rf {write_obj}", shell=True, capture_output=True, encoding='utf-8')
-        logger.info(f'remove file : {write_obj}')
 
         param = {'job_id': self.job_id}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')

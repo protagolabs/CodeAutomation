@@ -1,5 +1,7 @@
 import os
 import json
+import uuid
+
 import boto3
 import zipfile
 import tarfile
@@ -34,21 +36,29 @@ def _uncompress_tar(file_path, dest):
     for code_file in code_files:
         tar.extract(code_file, dest)
 
+def get_transformed_entry_file_name(origin_name):
+    #file_name = origin_name.split('/')[0]
+    print(f'origin_name: {origin_name}')
+
+    file_name = str(uuid.uuid4()).replace('-', '')
+    suffix = origin_name.split('/')[1].split('.')[1]
+    final_file_name = '.'.join([file_name, suffix])
+    return final_file_name
 
 def uncompress_code(suffix_name, file_path, dest):
-
+    final_file_name = None
     if suffix_name.endswith(".zip"):
         _uncompress_zip(file_path, dest)
 
     elif suffix_name.endswith(".tar") or suffix_name.endswith(".tar.gz"):
         _uncompress_tar(file_path, dest)
     else:
-        file_name = suffix_name.split('/')[1]
-        command = f'cp {file_path} {os.path.join(dest, file_name)}'
-        import subprocess
-        ret = subprocess.run(command, shell=True, capture_output=False,
-                             encoding='utf-8', timeout=50, check=True)
-        print(f'{command} finish: {ret}')
+        final_file_name = get_transformed_entry_file_name(suffix_name)
+        dir_name = os.path.dirname(file_path)
+        command = f'cp {dir_name}/* {os.path.join(dest, final_file_name)}'
+        print(command)
+        os.system(command)
+    return final_file_name
 
 
 def lambda_auth():
