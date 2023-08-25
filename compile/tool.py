@@ -44,7 +44,11 @@ def uncompress_code(suffix_name, file_path, dest):
         _uncompress_tar(file_path, dest)
     else:
         file_name = suffix_name.split('/')[1]
-        os.system(f'cp {file_path} {os.path.join(dest, file_name)}')
+        command = f'cp {file_path} {os.path.join(dest, file_name)}'
+        import subprocess
+        ret = subprocess.run(command, shell=True, capture_output=False,
+                             encoding='utf-8', timeout=50, check=True)
+        print(f'{command} finish: {ret}')
 
 
 def lambda_auth():
@@ -69,3 +73,5 @@ def lambda_invoke_inner(function, payload, async_call=False):
     if "Payload" in response and not async_call:
         return json.load(response["Payload"])
     return None
+
+

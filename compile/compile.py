@@ -18,7 +18,7 @@ logger.propagate = False
 logger.setLevel(os.getenv("NETMIND_LOGLEVEL", "INFO"))
 
 region = os.getenv("REGION", "us-west-2")
-domain = os.getenv("DOMAIN", "dev")
+domain = os.getenv("DOMAIN", "test")
 
 s3_client = boto3.client('s3', region_name = region)
 
@@ -99,17 +99,17 @@ class CodeBuilder:
         write_obj = ''
         try:
             logger.info(f'{self.s3_bucket} :  {self.s3_key}')
+            temp_dir = "/tmp/" + str(uuid.uuid4())
+            os.makedirs(temp_dir, exist_ok=True)
 
             file_name = self.s3_key.split('/')[1]
             write_obj = os.path.join('/tmp', file_name)
 
-            logger.info(f'download {self.s3_bucket}, {self.s3_key}')
+            logger.info(f'download {self.s3_bucket}, {self.s3_key} to {write_obj}')
             s3_client.download_file( self.s3_bucket, self.s3_key, write_obj)
 
-
-            temp_dir = "/tmp/" + str(uuid.uuid4())
-            os.makedirs(temp_dir, exist_ok=True)
             uncompress_code(self.s3_key, write_obj, temp_dir)
+
             logger.info(f'uncompress to {temp_dir}')
             output = [
                 directory
@@ -143,13 +143,9 @@ class CodeBuilder:
 
         except Exception as e:
             logger.exception(e)
-            return None, None
-        finally:
-            ret = subprocess.run(f"rm -rf {write_obj}", shell=True, capture_output=True, encoding='utf-8')
-            logger.info(f'remove file : {write_obj}')
-            pass
+            return None, None, None
 
-        return compress_dir, code_dir
+        return compress_dir, code_dir, write_obj
 
 
     def __execute_command(self, command):
@@ -159,7 +155,7 @@ class CodeBuilder:
         return
 
     def build(self):
-        compress_dir, code_dir = self.download_code()
+        compress_dir, code_dir, write_obj = self.download_code()
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
@@ -200,6 +196,9 @@ class CodeBuilder:
 
         ret = subprocess.run(f"rm -rf {compress_dir} ", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove_dir : {compress_dir}')
+        ret = subprocess.run(f"rm -rf {write_obj}", shell=True, capture_output=True, encoding='utf-8')
+        logger.info(f'remove file : {write_obj}')
+
         param = {'job_id': self.job_id}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
         lambda_invoke(LAMBDA_PREPARE_COMPLETE,  param)
@@ -211,7 +210,7 @@ def handler(event, context):
         raise ValueError(f'invalid format {event}')
 
     message_body = event["Records"][0]["body"]
-
+    #json_body = message_body
     json_body = json.loads(message_body)
     field_list = ['s3_path', 'entry_point', 'job_id', 'train_arguments']
 
@@ -235,14 +234,17 @@ def handler(event, context):
 
 
 if __name__ == '__main__':
-    event = {
-        'Records': [{'body': {
-                'job_id': '8c2eba07-8d86-4f46-80f8-da0d76b35adc',
-                's3_path': 'a45babc9-0495-4356-a8c2-27cea80666a7/tf-resnet-custom-automated.tar.gz',
-                'entry_point': 'train_netmind.py',
-                'train_arguments': '--model_name_or_path=resnet50'
-        }}]
-}
+    event = {'Records': [{'messageId': '05950022-edbb-4468-bcca-8e0dee6d6542', 'receiptHandle': 'AQEBxRUrmYkA00cSxN5tkNQQ48TDpdUxIauIBJEiBSUhw0PwrZkTauy4G3qbGq9umnGQSRAwmUBlu4KM89FLz7c+0b8CtwRzSZD3lhOTnBNnhe541/nI2XV6o4SBaVX4pudtRl2bSMbItjS2NG8N+KkZQlEITNh9NJIX0iSqAaG5jwTWzS6T2xFb84asfHb2lw/iDzmJ6jR6EQIF3HK6pEc3DUoRW0Mkl+PocVlcZmbAIuNqRJZ64xetA0u0RhuOqVXthBF9aJmlGf5MXXzFwR65hdeDKLce69N9ipSuOHBIM9vdOVb+8Uyrp2Pyi8I8QB760RYUDSnCXtB3P1tO28dc9hT+dUTIrfKA0wW09bqxHIxgOn18pUBPbRsDfKoDFM7uaI3IL8BrYu8DKS0DmGuex7g7aeSlLhU+5qcWfrmhPC0=',
+                          'body': '{"job_id": "4469f85c-a64f-4a7c-9a49-9c811197fbbf", '
+                                  '"s3_path": "e0ab34e7-0cbc-425d-9ed6-409f60ecaa6d/musicBot_trainer (1).ipynb", '
+                                  '"entry_point": "musicBot_trainer (1).ipynb", '
+                                  '"train_arguments": ""}',
+                          'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1692947727248',
+                                         'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon',
+                                         'ApproximateFirstReceiveTimestamp': '1692947732248'}, 'messageAttributes': {},
+                          'md5OfBody': 'e4ed6681fe1d9b6f9d7a78200c83ff0f', 'eventSource': 'aws:sqs',
+                          'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue',
+                          'awsRegion': 'us-west-2'}]}
     handler(event, None)
 
 
