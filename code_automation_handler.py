@@ -471,7 +471,7 @@ class CodeAutomationHandler:
         if s3_key.endswith('.tar') or s3_key.endswith('.tar.gz') or s3_key.endswith('.zip'):
             tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             uncompress_code(tf.name, temp_dir)
-        elif s3_key.endswith('ipynb'):
+        elif s3_key.endswith('ipynb') or s3_key.endswith('py'):
             target_file_name = s3_key.split('/')[1]
             with open(os.path.join(temp_dir, target_file_name), 'wb') as tf:
                 aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
