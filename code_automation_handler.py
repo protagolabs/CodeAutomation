@@ -2,6 +2,7 @@ import ast
 import json
 import os
 import re
+import glob
 import shutil
 import tarfile
 import tempfile
@@ -310,23 +311,25 @@ class CodeAutomationHandler:
         if exist:
             line = f'os.system(\'{line} > /dev/null \')\n'
         return line
-    def handle_ipynb(self, temp_dir):
-        for root, dirs, files in os.walk(temp_dir):
-            for file in files:
-                if file.split(".")[1] == "ipynb":
-                    path = os.path.join(root, file)
-                    code = json.load(open(path))
-                    target_file = os.path.join(temp_dir, file.split(".")[0] + ".py")
-                    with open(target_file, "w+") as py_file:
-                        py_file.write('import os\n')
-                        for cell in code["cells"]:
-                            if cell["cell_type"] == "code":
-                                for line in cell["source"]:
-                                    line = self.remove_prefix(line, ["!", "！"])
-                                    py_file.write(line)
-                                py_file.write("\n")
-                    os.system(f"rm {path}")
 
+    def handle_ipynb(self, temp_dir):
+        for file in glob.glob(f'{temp_dir}/**/*.ipynb', recursive=True):
+
+            code = json.load(open(file))
+            dirname = os.path.dirname(file)
+            fine_name = os.path.basename(file)
+            file_name = fine_name.split('.')[0] + '.py'
+            target_file = os.path.join(dirname, file_name)
+
+            with open(target_file, "w+") as py_file:
+                py_file.write('import os\n')
+                for cell in code["cells"]:
+                    if cell["cell_type"] == "code":
+                        for line in cell["source"]:
+                            line = self.remove_prefix(line, ["!", "！"])
+                            py_file.write(line)
+                        py_file.write("\n")
+            os.system(f"rm {file}")
     """
     def check(self, event):
         self.payload_check(event)
@@ -646,8 +649,8 @@ if __name__ == '__main__':
     payload = {
         "action": "check",
         "payload":
-            {
-                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/05363921-9a91-4083-9e9f-f597472b66ca/codelab_tf_custom_resnet.ipynb"
+            {    
+                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/0008a0d0-1930-4a5b-8d85-b641d9c74e8a/deep_learning_models.zip"
                 #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
                 #          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
