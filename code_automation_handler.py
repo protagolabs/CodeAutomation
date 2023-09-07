@@ -302,6 +302,33 @@ class CodeAutomationHandler:
 
         return
 
+    def handle_compressed_package(self, destination_dir):
+        max_uncompress_time = 5
+        suffix_pattern = ['.zip', '.tar.gz', '.tar']
+        compress_record_table = {}
+        not_exits_any_comressed_file = False
+        while max_uncompress_time > 0:
+            compress_record_table[str(max_uncompress_time)] = {}
+            for pattern in suffix_pattern:
+                glob_list = glob.glob(f'{destination_dir}/**/*{pattern}', recursive=True)
+                if len(glob_list) > 0:
+                    compress_record_table[str(max_uncompress_time)][pattern] = True
+                else:
+                    compress_record_table[str(max_uncompress_time)][pattern] = False
+                logger.info(f'max_uncompress_time: {max_uncompress_time}, glob_list: {glob_list},  pattern:{pattern}, destination_dir:{destination_dir}')
+                for matched_file in glob_list:
+                    matched_file_dir_name = os.path.dirname(matched_file)
+                    uncompress_code(matched_file, matched_file_dir_name)
+                    logger.debug(f'uncompress {matched_file} to {matched_file_dir_name}')
+                    os.system(f'rm {matched_file}')
+            #whther skip this loop
+            vals = compress_record_table[str(max_uncompress_time)].values()
+            if True not in vals:
+                break
+
+            max_uncompress_time -= 1
+
+
     def remove_prefix(self, line, character_list):
         exist = False
         for character in character_list:
@@ -311,6 +338,7 @@ class CodeAutomationHandler:
         if exist:
             line = f'os.system(\'{line} > /dev/null \')\n'
         return line
+
 
     def handle_ipynb(self, temp_dir):
         for file in glob.glob(f'{temp_dir}/**/*.ipynb', recursive=True):
@@ -474,11 +502,14 @@ class CodeAutomationHandler:
         if s3_key.endswith('.tar') or s3_key.endswith('.tar.gz') or s3_key.endswith('.zip'):
             tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             uncompress_code(tf.name, temp_dir)
+
+            self.handle_compressed_package(temp_dir)
+
         elif s3_key.endswith('ipynb') or s3_key.endswith('py'):
             target_file_name = s3_key.split('/')[1]
             with open(os.path.join(temp_dir, target_file_name), 'wb') as tf:
                 aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
-            
+
 
         output = [
             directory
@@ -533,15 +564,20 @@ class CodeAutomationHandler:
             elif s3_key.endswith(".zip"):
                 with tempfile.TemporaryFile(suffix=".zip") as f:
                     with zipfile.ZipFile(f, "w") as zip_file:
-                        dir_name = ""
                         for root, dir, files in os.walk(dir_path):
-                            if len(dir) > 0:
-                                dir_name = dir[0]
+
+                            if len(files) > 0:
+                                print(f'root: {root}, dir_path: {dir_path}')
+                                arc_dir_name = root.lstrip(dir_path)
                             for file in files:
+                                write_file_name = os.path.join(root, file)
+                                arc_name = os.path.join(arc_dir_name, file)
+                                print(f'write write_file_name:{write_file_name}, arcname:{arc_name}')
                                 zip_file.write(
-                                    os.path.join(root, file),
-                                    arcname=os.path.join(dir_name, file),
+                                    write_file_name,
+                                    arcname=arc_name,
                                 )
+
                     f.flush()
                     f.seek(0)
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
@@ -560,6 +596,7 @@ class CodeAutomationHandler:
 
 
         _compress_tar(origin_dir)
+
         logger.info(f'package already upload to {AwsS3.S3_JOB_MODEL_CODE_BUCKET} {s3_key}')
 
         shutil.rmtree(temp_dir)
@@ -649,8 +686,8 @@ if __name__ == '__main__':
     payload = {
         "action": "check",
         "payload":
-            {    
-                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/0008a0d0-1930-4a5b-8d85-b641d9c74e8a/deep_learning_models.zip"
+            {
+                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/04b64bb2-6edd-43a1-bc43-65e6a186598d/store.zip"
                 #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
                 #          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
             }
