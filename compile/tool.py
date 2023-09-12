@@ -40,7 +40,8 @@ def get_transformed_entry_file_name(origin_name):
     #file_name = origin_name.split('/')[0]
     print(f'origin_name: {origin_name}')
 
-    file_name = str(uuid.uuid4()).replace('-', '')
+    # python can not import module that starts with number.
+    file_name = "main_" + str(uuid.uuid4()).replace('-', '')
     suffix = origin_name.split('/')[1].split('.')[1]
     final_file_name = '.'.join([file_name, suffix])
     return final_file_name
