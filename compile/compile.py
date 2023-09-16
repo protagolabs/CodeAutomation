@@ -2,7 +2,7 @@ import os
 import sys
 import uuid
 import json
-
+import glob
 import boto3
 import subprocess
 import datetime
@@ -159,6 +159,18 @@ class CodeBuilder:
         validate_status(ret.returncode, command)
         return
 
+    def __add_package_name(self, destination_dir):
+        command = ''
+        add_package_command = '  --follow-import-to='
+        glob_list = glob.glob(f'{destination_dir}/*/**/', recursive=True)
+        for item in glob_list:
+            base_name = item.split('/')[-2]
+            if base_name.startswith('__'):
+                continue
+            package_name = item.replace(destination_dir, '').strip('/').replace('/', '.')
+            command += add_package_command + package_name
+        return command
+
     def build(self):
         compress_dir, code_dir = self.download_code()
         if not compress_dir or not code_dir:
@@ -183,6 +195,8 @@ class CodeBuilder:
         command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
+        command_compile_binary_package += self.__add_package_name(code_dir)
+
         self.__execute_command(command_compile_binary_package)
         logger.info(f'execute command {command_compile_binary_package} finish')
 
@@ -234,8 +248,8 @@ def handler(event, context):
 if __name__ == '__main__':
     event = {'Records': [{'messageId': '05950022-edbb-4468-bcca-8e0dee6d6542', 'receiptHandle': 'AQEBxRUrmYkA00cSxN5tkNQQ48TDpdUxIauIBJEiBSUhw0PwrZkTauy4G3qbGq9umnGQSRAwmUBlu4KM89FLz7c+0b8CtwRzSZD3lhOTnBNnhe541/nI2XV6o4SBaVX4pudtRl2bSMbItjS2NG8N+KkZQlEITNh9NJIX0iSqAaG5jwTWzS6T2xFb84asfHb2lw/iDzmJ6jR6EQIF3HK6pEc3DUoRW0Mkl+PocVlcZmbAIuNqRJZ64xetA0u0RhuOqVXthBF9aJmlGf5MXXzFwR65hdeDKLce69N9ipSuOHBIM9vdOVb+8Uyrp2Pyi8I8QB760RYUDSnCXtB3P1tO28dc9hT+dUTIrfKA0wW09bqxHIxgOn18pUBPbRsDfKoDFM7uaI3IL8BrYu8DKS0DmGuex7g7aeSlLhU+5qcWfrmhPC0=',
                           'body': '{"job_id": "4469f85c-a64f-4a7c-9a49-9c811197fbbf", '
-                                  '"s3_path": "e0ab34e7-0cbc-425d-9ed6-409f60ecaa6d/musicBot_trainer (1).ipynb", '
-                                  '"entry_point": "musicBot_trainer (1).ipynb", '
+                                  '"s3_path": "e0ab34e7-0cbc-425d-9ed6-409f60ecaa6d/deep_learning_models.zip", '
+                                  '"entry_point": "bert_qa_preprocess_and_finetune_script.py", '
                                   '"train_arguments": ""}',
                           'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1692947727248',
                                          'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon',
