@@ -94,9 +94,7 @@ class CodeBuilder:
         return exist_pattern
 
     def download_code(self):
-        compress_dir = ''
-        code_dir = ''
-        write_obj = ''
+
         try:
             logger.info(f'{self.s3_bucket} :  {self.s3_key}')
             temp_dir = "/tmp/" + str(uuid.uuid4())
@@ -167,6 +165,7 @@ class CodeBuilder:
             base_name = item.split('/')[-2]
             if base_name.startswith('__'):
                 continue
+            #get all package directory and added on nuitka command
             package_name = item.replace(destination_dir, '').strip('/').replace('/', '.')
             command += add_package_command + package_name
         return command
@@ -176,8 +175,8 @@ class CodeBuilder:
         if not compress_dir or not code_dir:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
-        exist_main_function = self.handle_entry_point(code_dir)
 
+        exist_main_function = self.handle_entry_point(code_dir)
 
         compile_path = os.path.join(code_dir, '*')
         if not compress_dir and not code_dir:
@@ -208,8 +207,20 @@ class CodeBuilder:
             binary_key = os.path.join(self.s3_key.split('/')[0], 'binary_run_file')
             s3_client.upload_fileobj(f_binary, self.s3_bucket, binary_key)
 
+        #handle code_dir, delete all py file and upload to s3
+        for file in glob.glob(f'{code_dir}/**/*.py', recursive=True):
+            os.system(f'rm {file}')
+        resource_package_name = 'resource.tar.gz'
+        os.system(f'tar czvf {resource_package_name} {code_dir}')
+        with open(resource_package_name, 'rb') as f_resource:
+            resource_package_key = os.path.join(self.s3_key.split('/')[0], resource_package_name)
+            s3_client.upload_fileobj(f_resource, self.s3_bucket, resource_package_key)
+
+        #clean unused directory
         ret = subprocess.run(f"rm -rf {compress_dir} ", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove_dir : {compress_dir}')
+        ret = subprocess.run(f"rm  {resource_package_name} ", shell=True, capture_output=True, encoding='utf-8')
+        logger.info(f'remove resource package  : {resource_package_name}')
 
         param = {'job_id': self.job_id}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
