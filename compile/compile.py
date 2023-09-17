@@ -210,10 +210,14 @@ class CodeBuilder:
         #handle code_dir, delete all py file and upload to s3
         for file in glob.glob(f'{code_dir}/**/*.py', recursive=True):
             os.system(f'rm {file}')
-        resource_package_name = 'resource.tar.gz'
-        os.system(f'tar czvf {resource_package_name} {code_dir}')
+        resource_package_name = '/tmp/resource.tar.gz'
+        code_dir_parent_dir = os.path.dirname(code_dir)
+        code_dir_base_dir = os.path.basename(code_dir)
+        os.system(f'cd {code_dir_parent_dir} && tar czvf {resource_package_name} {code_dir_base_dir} && cd -')
         with open(resource_package_name, 'rb') as f_resource:
-            resource_package_key = os.path.join(self.s3_key.split('/')[0], resource_package_name)
+            print(f'self.s3_key: {self.s3_key}')
+            resource_package_key = os.path.join(self.s3_key.split('/')[0], 'resource.tar.gz')
+            print(f'upload {resource_package_name} to {self.s3_bucket}:{resource_package_key}')
             s3_client.upload_fileobj(f_resource, self.s3_bucket, resource_package_key)
 
         #clean unused directory
