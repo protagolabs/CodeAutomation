@@ -134,7 +134,7 @@ class CodeBuilder:
                     file_dir = file_dir.replace(' ', '')
                     replaced_file_dir = os.path.join(temp_dir, file_dir)
                     shutil.move(source_dir, replaced_file_dir)
-                    
+
                     temp_dir = os.path.join(temp_dir, file_dir)
 
             compress_dir = temp_dir
@@ -232,7 +232,7 @@ class CodeBuilder:
         ret = subprocess.run(f"rm  {resource_package_name} ", shell=True, capture_output=True, encoding='utf-8')
         logger.info(f'remove resource package  : {resource_package_name}')
 
-        param = {'job_id': self.job_id}
+        param = {'job_id': self.job_id, 'success': True}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
         lambda_invoke(LAMBDA_PREPARE_COMPLETE,  param)
 
@@ -264,7 +264,9 @@ def handler(event, context):
         traceback.print_exc()
 
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
-
+        param = {'job_id': job_id, 'success': False}
+        logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
+        lambda_invoke(LAMBDA_PREPARE_COMPLETE, param)
 
 if __name__ == '__main__':
     event = {'Records': [{'messageId': '05950022-edbb-4468-bcca-8e0dee6d6542', 'receiptHandle': 'AQEBxRUrmYkA00cSxN5tkNQQ48TDpdUxIauIBJEiBSUhw0PwrZkTauy4G3qbGq9umnGQSRAwmUBlu4KM89FLz7c+0b8CtwRzSZD3lhOTnBNnhe541/nI2XV6o4SBaVX4pudtRl2bSMbItjS2NG8N+KkZQlEITNh9NJIX0iSqAaG5jwTWzS6T2xFb84asfHb2lw/iDzmJ6jR6EQIF3HK6pEc3DUoRW0Mkl+PocVlcZmbAIuNqRJZ64xetA0u0RhuOqVXthBF9aJmlGf5MXXzFwR65hdeDKLce69N9ipSuOHBIM9vdOVb+8Uyrp2Pyi8I8QB760RYUDSnCXtB3P1tO28dc9hT+dUTIrfKA0wW09bqxHIxgOn18pUBPbRsDfKoDFM7uaI3IL8BrYu8DKS0DmGuex7g7aeSlLhU+5qcWfrmhPC0=',
