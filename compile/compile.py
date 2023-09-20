@@ -4,6 +4,7 @@ import uuid
 import json
 import glob
 import boto3
+import shutil
 import subprocess
 import datetime
 
@@ -129,6 +130,11 @@ class CodeBuilder:
             if len(ipynb_list) == 0 and len(file_list) == 0:
                 file_dir = output[0] if len(output) == 1 else None
                 if file_dir:
+                    source_dir = os.path.join(temp_dir, file_dir)
+                    file_dir = file_dir.replace(' ', '')
+                    replaced_file_dir = os.path.join(temp_dir, file_dir)
+                    shutil.move(source_dir, replaced_file_dir)
+                    
                     temp_dir = os.path.join(temp_dir, file_dir)
 
             compress_dir = temp_dir
@@ -272,6 +278,8 @@ if __name__ == '__main__':
                           'md5OfBody': 'e4ed6681fe1d9b6f9d7a78200c83ff0f', 'eventSource': 'aws:sqs',
                           'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue',
                           'awsRegion': 'us-west-2'}]}
+    event = {'Records': [{'messageId': '84adb9a9-343e-46a9-88e4-71e7f0cef151', 'receiptHandle': 'AQEBz9vyAL/4dCyQPdJj85rXSa/nc+l6beZroxDdbwWqXMrk33mwHX7uLeaprSgwfwz/oJ1ajON8B0BnfyFZdwXCm8rpFYxnReQ3SvX8YACCvnXy0aEbxjbQfH1HVVDN7RCgdmf/Q/BnE2RLzhmRVrVbFJrWk4e3GxzoAyxHCjgByJ0vNyTmePVV6fj0SqEfNTE56fDWNhsC2n0D4M3lgIg5eHvW0U4PVWvQJ6PDCb965AWYFnlHviRyYdY9mFUIAzfX9t9vXv/UPZWeodLtDWiE/6u9a9L4TR78pMWn4j6Fj6LVNjwnxNJEFDO4lsstYd/cBT4oc7FJihP7G6pfnudyVtrP9hhu1YSc4KhAh1K5r5+5vVFAW8tG4whVgHkeRLOlLZPALLxQ3CfYvSfCp4fTHCUoCB8VTjB0BQ2LG1FnMHs=', 'body': '{"job_id": "fb321ca6-3aec-487c-b617-3208688a189a", "s3_path": "40ff2660-2a45-4f79-9def-a519f6c6a611/_learning_models 2.zip", "entry_point": "bert_qa_preprocess_and_finetune_script.py", "train_arguments": ""}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1695142226580', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1695142231580'}, 'messageAttributes': {}, 'md5OfBody': '02cfa1bff2705809b345ad9c7e3149c8', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
+
     handler(event, None)
 
 
