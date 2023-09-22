@@ -59,7 +59,6 @@ class CodeGenerator(object):
                 f.write(f'{entry_point_module_name}.entry()\n')
         with open(self.target_py_file_name, 'r') as f:
             content = f.read()
-            print(f'content of {self.target_py_file_name}: {content}')
 
 
 
@@ -87,7 +86,7 @@ class CodeBuilder:
             for index, line in enumerate(lines):
                 if lines[index].startswith(pattern):
                     exist_pattern = True
-                    print(f'{pattern} exist in {lines[index]}')
+                    logger.info(f'{pattern} exist in {lines[index]}')
                     lines[index] = lines[index].replace(pattern, "def entry():")
                     break
             f.seek(0)
@@ -206,7 +205,7 @@ class CodeBuilder:
         logger.info(f'execute command {command_compile_binary_package} finish')
 
         endtime = datetime.datetime.now()
-        print(f'command cost : {endtime - starttime}')
+        logger.info(f'command cost : {endtime - starttime}')
 
         with open(binary_run_file, 'rb') as f_binary:
 
@@ -221,9 +220,8 @@ class CodeBuilder:
         code_dir_base_dir = os.path.basename(code_dir)
         os.system(f'cd {code_dir_parent_dir} && tar czvf {resource_package_name} {code_dir_base_dir} && cd -')
         with open(resource_package_name, 'rb') as f_resource:
-            print(f'self.s3_key: {self.s3_key}')
             resource_package_key = os.path.join(self.s3_key.split('/')[0], 'resource.tar.gz')
-            print(f'upload {resource_package_name} to {self.s3_bucket}:{resource_package_key}')
+            logger.info(f'upload {resource_package_name} to {self.s3_bucket}:{resource_package_key}')
             s3_client.upload_fileobj(f_resource, self.s3_bucket, resource_package_key)
 
         #clean unused directory
@@ -259,7 +257,7 @@ def handler(event, context):
         build.build()
     except Exception as e:
         event_msg = str(e)
-        print(event_msg)
+        logger.error(event_msg)
         import traceback
         traceback.print_exc()
 
