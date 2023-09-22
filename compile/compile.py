@@ -152,6 +152,9 @@ class CodeBuilder:
         except Exception as e:
             logger.exception(e)
             return None, None
+        finally:
+            if os.path.exists(download_file_dir):
+                shutil.rmtree(download_file_dir)
 
         return compress_dir, code_dir
 
