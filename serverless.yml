@@ -102,6 +102,8 @@ functions:
       - arn:aws:lambda:us-west-2:#{AWS::AccountId}:layer:webkit_layer_${opt:stage}:latest
 
   compile:
+    alarms:
+      - functionLogErrors
     memorySize: 4096
     image: nuitka_images
     timeout: 40
