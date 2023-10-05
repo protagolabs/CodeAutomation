@@ -54,9 +54,10 @@ class CodeGenerator(object):
             f.write(f'import os\n')
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
-            f.write(f'import {entry_point_module_name}\n')
+            f.write('if __name__ == "__main__":')
+            f.write(f'  import {entry_point_module_name}\n')
             if exist_main_function:
-                f.write(f'{entry_point_module_name}.entry()\n')
+                f.write(f'  {entry_point_module_name}.entry()\n')
         with open(self.target_py_file_name, 'r') as f:
             content = f.read()
 
