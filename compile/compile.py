@@ -33,38 +33,6 @@ def validate_path(path):
     if os.path.exists(path):
         raise FileExistsError(f'path {path} already exists')
 
-
-class CodeGenerator(object):
-
-    def __init__(self, job_id, arguments, code_dir):
-        self.job_id = job_id
-        self.code_dir = code_dir
-        self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
-        self.arguments = arguments
-
-
-    def generate_py_file(self, exist_main_function, arguments, entry_point_file):
-        argument_list = arguments.split(' ')
-        str_argument_list = [' ']
-        for argument in argument_list:
-            str_argument_list.append(str(argument))
-        command_argv = f'sys.argv = {str_argument_list}'
-        entry_point_module_name = entry_point_file.split('.')[0]
-        with open(self.target_py_file_name, 'w') as f:
-            f.write(f'import os\n')
-            f.write(f'import sys\n')
-            f.write(f'{command_argv}\n')
-            f.write('if __name__ == "__main__":')
-            f.write(f'  import {entry_point_module_name}\n')
-            if exist_main_function:
-                f.write(f'  {entry_point_module_name}.entry()\n')
-        with open(self.target_py_file_name, 'r') as f:
-            content = f.read()
-
-
-
-
-
 class CodeBuilder:
     def __init__(self, job_id, s3_path, entry_point, arguments) -> None:
         self.job_id = job_id
@@ -77,22 +45,26 @@ class CodeBuilder:
         self.entry_point_file = entry_point
         self.arguments = arguments
 
+
+
     def handle_entry_point(self, code_dir):
-        exist_pattern = False
         entry_point_file = os.path.join(code_dir, self.entry_point_file)
-        with open(entry_point_file, 'r+') as f:
-            pattern = "if __name__ == \'__main__\':"
+        argument_list = self.arguments.split(' ')
+        str_argument_list = [self.entry_point_file]
+        for argument in argument_list:
+            str_argument_list.append(str(argument))
+        command_argv = f'sys.argv = {str_argument_list}'
+        logger.info(f'read {entry_point_file}')
+
+        with open(entry_point_file, 'r') as f:
             lines = f.readlines()
-            f.truncate(0)
-            for index, line in enumerate(lines):
-                if lines[index].startswith(pattern):
-                    exist_pattern = True
-                    logger.info(f'{pattern} exist in {lines[index]}')
-                    lines[index] = lines[index].replace(pattern, "def entry():")
-                    break
-            f.seek(0)
-            f.writelines(lines)
-        return exist_pattern
+
+        with open(entry_point_file, 'w') as f:
+            f.write(f'import sys\n')
+            f.write(f'{command_argv}\n')
+            for line in lines:
+                f.write(line)
+
 
     def download_code(self):
 
@@ -185,7 +157,7 @@ class CodeBuilder:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
 
-        exist_main_function = self.handle_entry_point(code_dir)
+        self.handle_entry_point(code_dir)
 
         compile_path = os.path.join(code_dir, '*')
         if not compress_dir and not code_dir:
@@ -194,13 +166,10 @@ class CodeBuilder:
 
         starttime = datetime.datetime.now()
 
-        # wrap entry point
-        code_generator_impl = CodeGenerator(self.job_id, self.arguments, code_dir)
-        code_generator_impl.generate_py_file(exist_main_function, self.arguments, self.entry_point_file)
 
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
-        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
+        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.entry_point_file}')} " \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
         command_compile_binary_package += self.__add_package_name(code_dir)
@@ -282,8 +251,8 @@ if __name__ == '__main__':
                           'md5OfBody': 'e4ed6681fe1d9b6f9d7a78200c83ff0f', 'eventSource': 'aws:sqs',
                           'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue',
                           'awsRegion': 'us-west-2'}]}
-    event = {'Records': [{'messageId': '84adb9a9-343e-46a9-88e4-71e7f0cef151', 'receiptHandle': 'AQEBz9vyAL/4dCyQPdJj85rXSa/nc+l6beZroxDdbwWqXMrk33mwHX7uLeaprSgwfwz/oJ1ajON8B0BnfyFZdwXCm8rpFYxnReQ3SvX8YACCvnXy0aEbxjbQfH1HVVDN7RCgdmf/Q/BnE2RLzhmRVrVbFJrWk4e3GxzoAyxHCjgByJ0vNyTmePVV6fj0SqEfNTE56fDWNhsC2n0D4M3lgIg5eHvW0U4PVWvQJ6PDCb965AWYFnlHviRyYdY9mFUIAzfX9t9vXv/UPZWeodLtDWiE/6u9a9L4TR78pMWn4j6Fj6LVNjwnxNJEFDO4lsstYd/cBT4oc7FJihP7G6pfnudyVtrP9hhu1YSc4KhAh1K5r5+5vVFAW8tG4whVgHkeRLOlLZPALLxQ3CfYvSfCp4fTHCUoCB8VTjB0BQ2LG1FnMHs=', 'body': '{"job_id": "fb321ca6-3aec-487c-b617-3208688a189a", "s3_path": "40ff2660-2a45-4f79-9def-a519f6c6a611/_learning_models 2.zip", "entry_point": "bert_qa_preprocess_and_finetune_script.py", "train_arguments": ""}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1695142226580', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1695142231580'}, 'messageAttributes': {}, 'md5OfBody': '02cfa1bff2705809b345ad9c7e3149c8', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
 
+    event = {'Records': [{'messageId': '0f53b920-eec0-4c2e-8899-a196194a428b', 'receiptHandle': 'AQEBz1khCgIKXe9S2AKxqtSaMxFEdgKJXEUad+gOtE9Uupompag7R/yJKOCpBgHujNzeJwtWVn2rssfOD/4KWuNLFPyoOlRYLsMv/dzD8RHPR4IcS5xxAxv49oy8MUlGTmdJAxt/tz0TjkADF6dZEO3AUPw6j5Q8W/FBYgnigkMInicwtp5o4PCzhEyfTEA8MlJ2TYH9DVfsdwNKuxl/a1k8rb6YE94sSKBG4Wy9yObbo/RS36Qi5yh7f/QnN/xNW/EnowusvZNvfqteF4O8kvOgsjYjTO/IGWEjrFYjt1Gebq9KqP/+eke9AD85YS6OEMQY2K7TFRtBnzzRn1LH0yIIQgGMTTY2ayvPau0SRyvQeYBzZVH5/xNmYukzxvLZzyN/l3EYc4Xqad1r+5m2e3xDmj8xo6hGc7KjU7vHDSgvtjg=', 'body': '{"job_id": "867600c9-24b5-4c66-920e-b2a61dd1fccf", "s3_path": "3ecc3893-748b-4161-a484-8561535e7960/torch_resnet_custom_ddp_automated.tar.gz", "entry_point": "train_dist.py", "train_arguments": "--data /netmind_train/datasets/867600c9-24b5-4c66-920e-b2a61dd1fccf"}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1694750022912', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1694750027913'}, 'messageAttributes': {}, 'md5OfBody': 'e65f54f393b6c58c98e1b658034deae3', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
     handler(event, None)
 
 
