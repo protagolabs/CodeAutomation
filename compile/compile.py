@@ -54,7 +54,7 @@ class CodeBuilder:
         for argument in argument_list:
             str_argument_list.append(str(argument))
         command_argv = f'sys.argv = {str_argument_list}'
-        logger.info(f'read {entry_point_file}')
+        logger.info(f'command_argv {command_argv}')
 
         with open(entry_point_file, 'r') as f:
             lines = f.readlines()
