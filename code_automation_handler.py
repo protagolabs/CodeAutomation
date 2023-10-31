@@ -354,7 +354,7 @@ class CodeAutomationHandler:
                 for cell in code["cells"]:
                     if cell["cell_type"] == "code":
                         for line in cell["source"]:
-                            line = self.remove_prefix(line, ["!", "！"])
+                            line = self.remove_prefix(line, ["!", "！", "%"])
                             py_file.write(line)
                         py_file.write("\n")
             os.system(f"rm {file}")
