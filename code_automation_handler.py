@@ -328,17 +328,44 @@ class CodeAutomationHandler:
 
             max_uncompress_time -= 1
 
+    def remove_prefix(self, line):
+        exclamation_point = '!'
+        percent_sign_with_cd = '%cd'
+        percent_sign = '%'
+        double_percent_sign = '%%'
+        legal_percent_sign_list = ['%pwd', '%ls', '%cp', '%mv', '%mkdir',
+                                    '%rm', '%rmdir', '%cat', '%pip', '%conda', '%env', '%setenv']
 
-    def remove_prefix(self, line, character_list):
-        exist = False
-        for character in character_list:
-            if line.lstrip().startswith(character):
-                exist = True
-                line = line.lstrip(character).strip()
-        if exist:
-            line = f'os.system(\'{line} > /dev/null \')\n'
+        leading_spaces = len(line) - len(line.lstrip())
+        without_leading_spaces_line = line.lstrip()
+
+
+        special_pattern = False
+        if without_leading_spaces_line.startswith(exclamation_point):
+            line = line.replace(exclamation_point, '').rstrip()
+            line = f'os.system(f\'{line.strip()}\')\n'
+            special_pattern = True
+
+        elif without_leading_spaces_line.startswith(percent_sign):
+            line = line.rstrip()
+            if without_leading_spaces_line.startswith(double_percent_sign):
+                line = f'#{line}\n'
+            elif without_leading_spaces_line.startswith(percent_sign_with_cd):
+                line = line.replace(percent_sign_with_cd, '')
+                line = f'os.chdir(f\'{line.strip()}\')\n'
+            else:
+                word_list = without_leading_spaces_line.split('\n')[0].split(' ')
+
+                first_word = word_list[0]
+                if first_word in legal_percent_sign_list:
+                    line = line.lstrip(percent_sign)
+                    line = f'os.system(f\'{line.strip()}\')\n'
+                else:
+                    line = f'#{line}\n'
+            special_pattern = True
+        if special_pattern:
+            line = ' ' * leading_spaces + line
         return line
-
 
     def handle_ipynb(self, temp_dir):
         for file in glob.glob(f'{temp_dir}/**/*.ipynb', recursive=True):
@@ -354,9 +381,10 @@ class CodeAutomationHandler:
                 for cell in code["cells"]:
                     if cell["cell_type"] == "code":
                         for line in cell["source"]:
-                            line = self.remove_prefix(line, ["!", "！", "%"])
+                            line = self.remove_prefix(line)
                             py_file.write(line)
                         py_file.write("\n")
+
             os.system(f"rm {file}")
     """
     def check(self, event):
@@ -687,9 +715,8 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
-                "code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/04b64bb2-6edd-43a1-bc43-65e6a186598d/store.zip"
-                #"code_file": "https://protagolabs-netmind-job-model-code-dev.s3.amazonaws.com/"
-                #          "0f3f0a85-3510-4df1-8608-6f7a61d2042b/tf-resnet-custom-automated.tar.gz"
+                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/83b11bbf-5777-4ae1-8c42-795a8da4bf39/main (2).ipynb"
+
             }
     }
 
