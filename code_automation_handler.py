@@ -343,7 +343,7 @@ class CodeAutomationHandler:
         special_pattern = False
         if without_leading_spaces_line.startswith(exclamation_point):
             line = line.replace(exclamation_point, '').rstrip()
-            line = f'os.system(f\'{line.strip()}\')\n'
+            line = f'os.system(f\'{line.strip()} > /dev/null\')\n'
             special_pattern = True
 
         elif without_leading_spaces_line.startswith(percent_sign):
@@ -359,7 +359,7 @@ class CodeAutomationHandler:
                 first_word = word_list[0]
                 if first_word in legal_percent_sign_list:
                     line = line.lstrip(percent_sign)
-                    line = f'os.system(f\'{line.strip()}\')\n'
+                    line = f'os.system(f\'{line.strip()} > /dev/null\')\n'
                 else:
                     line = f'#{line}\n'
             special_pattern = True
