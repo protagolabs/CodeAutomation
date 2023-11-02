@@ -373,7 +373,7 @@ class CodeAutomationHandler:
                     line = line.replace(percent_sign, '')
                     line = f'os.system(f\'{line.strip()} \')\n'
                 else:
-                    line = f'#{line}\n'
+                    line = f'pass\n'
             special_pattern = True
         if special_pattern:
             line = ' ' * leading_spaces + line
@@ -727,7 +727,7 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
-                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/pix2pix.ipynb"
+                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
 
             }
     }
