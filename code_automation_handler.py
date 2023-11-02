@@ -328,6 +328,14 @@ class CodeAutomationHandler:
 
             max_uncompress_time -= 1
 
+    def __handle_progress_command(self, line):
+        progress_command = ['tar', 'zip', 'unzip', 'wget']
+        null_pattern = "1>/dev/null 2>&1"
+        for command in progress_command:
+            if line.find(command) != -1:
+                return f'os.system(f\'{line.strip()} {null_pattern}\')\n'
+        return f'os.system(f\'{line.strip()} \')\n'
+
     def remove_prefix(self, line):
         exclamation_point = '!'
         percent_sign_with_cd = '%cd'
@@ -336,14 +344,18 @@ class CodeAutomationHandler:
         legal_percent_sign_list = ['%pwd', '%ls', '%cp', '%mv', '%mkdir',
                                     '%rm', '%rmdir', '%cat', '%pip', '%conda', '%env', '%setenv']
 
+
         leading_spaces = len(line) - len(line.lstrip())
         without_leading_spaces_line = line.lstrip()
 
 
         special_pattern = False
+
+
         if without_leading_spaces_line.startswith(exclamation_point):
             line = line.replace(exclamation_point, '').rstrip()
-            line = f'os.system(f\'{line.strip()} > /dev/null\')\n'
+
+            line = self.__handle_progress_command(line)
             special_pattern = True
 
         elif without_leading_spaces_line.startswith(percent_sign):
@@ -359,7 +371,7 @@ class CodeAutomationHandler:
                 first_word = word_list[0]
                 if first_word in legal_percent_sign_list:
                     line = line.replace(percent_sign, '')
-                    line = f'os.system(f\'{line.strip()} > /dev/null\')\n'
+                    line = f'os.system(f\'{line.strip()} \')\n'
                 else:
                     line = f'#{line}\n'
             special_pattern = True
@@ -715,7 +727,7 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
-                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/83b11bbf-5777-4ae1-8c42-795a8da4bf39/main (2).ipynb"
+                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/pix2pix.ipynb"
 
             }
     }
