@@ -358,7 +358,7 @@ class CodeAutomationHandler:
 
                 first_word = word_list[0]
                 if first_word in legal_percent_sign_list:
-                    line = line.lstrip(percent_sign)
+                    line = line.replace(percent_sign, '')
                     line = f'os.system(f\'{line.strip()} > /dev/null\')\n'
                 else:
                     line = f'#{line}\n'
