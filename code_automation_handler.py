@@ -332,8 +332,8 @@ class CodeAutomationHandler:
         #origin_line should be string removed %pattern like  %run script.py --argument 1 ==>  script.py --argument 1
 
 
-        file_name = origin_line.strip().split()[0]
 
+        file_name = entry_block = origin_line.strip().split()[0]
 
         if file_name.find('/') != -1:
             file_name = file_name.split('/')[-1]
@@ -341,7 +341,7 @@ class CodeAutomationHandler:
 
 
         file_name_without_suffix = file_name.split('.')[0]
-        origin_line = origin_line.replace(file_name, '')
+        origin_line = origin_line.replace(entry_block, '')
 
         exist_main = handle_invoked_file(os.getcwd(), file_name)
 
@@ -352,17 +352,18 @@ class CodeAutomationHandler:
         for argument in matches_list:
             argv_list.append(argument)
 
+        if origin_line.find('cluster/train_cluster') != -1:
+            print(f'argv_list: {argv_list}')
+
         ret_command = ""
         ret_command = ' ' * leading_spaces + f'origin_argv = sys.argv\n'
-
-
 
         argv_command_line = f'sys.argv = {argv_list}\n'
 
         argv_command_line = argv_command_line.replace('"{', 'f"{')
         argv_command_line = argv_command_line.replace("'{", "f'{")
         ret_command += ' ' * leading_spaces + argv_command_line
-        ret_command += ' ' * leading_spaces + f'import {file_name_without_suffix}\n'
+        ret_command += ' ' * leading_spaces + f'import {entry_block.replace("/", ".")}\n'
         if exist_main:
             ret_command += ' ' * leading_spaces + f'{file_name_without_suffix}.entry()\n'
         ret_command += ' ' * leading_spaces + 'sys.argv = origin_argv\n'
