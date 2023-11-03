@@ -106,7 +106,7 @@ functions:
       - functionLogErrors
     memorySize: 4096
     image: nuitka_images
-    timeout: 40
+    timeout: 200
     environment:
       DOMAIN: ${opt:stage}
       REGION: ${opt:region}
