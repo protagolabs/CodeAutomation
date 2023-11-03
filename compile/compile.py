@@ -138,6 +138,23 @@ class CodeBuilder:
         validate_status(ret.returncode, command)
         return
 
+
+    def __add_root_dir_module_name(self, destination_dir):
+        command = ''
+        add_module_command = '  --include-module='
+        entry_point_module = self.entry_point_file.split('.')[0]
+        glob_list = glob.glob(f'{destination_dir}/*.py', recursive=False)
+        for item in glob_list:
+            base_name = item.split('/')[-1]
+            if base_name.startswith('__'):
+                continue
+            if base_name == entry_point_module:
+                continue
+            #get all module and added on nuitka command
+            module_name = item.split('/')[-1].split('.')[0]
+            command += add_module_command + module_name
+        return command
+
     def __add_package_name(self, destination_dir):
         command = ''
         add_package_command = '  --follow-import-to='
@@ -170,9 +187,12 @@ class CodeBuilder:
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
         command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.entry_point_file}')} " \
-                                         f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
+
+
+        command_compile_binary_package += self.__add_root_dir_module_name(code_dir)
         command_compile_binary_package += self.__add_package_name(code_dir)
+
 
         self.__execute_command(command_compile_binary_package)
         logger.info(f'execute command {command_compile_binary_package} finish')
@@ -240,19 +260,8 @@ def handler(event, context):
         lambda_invoke(LAMBDA_PREPARE_COMPLETE, param)
 
 if __name__ == '__main__':
-    event = {'Records': [{'messageId': '05950022-edbb-4468-bcca-8e0dee6d6542', 'receiptHandle': 'AQEBxRUrmYkA00cSxN5tkNQQ48TDpdUxIauIBJEiBSUhw0PwrZkTauy4G3qbGq9umnGQSRAwmUBlu4KM89FLz7c+0b8CtwRzSZD3lhOTnBNnhe541/nI2XV6o4SBaVX4pudtRl2bSMbItjS2NG8N+KkZQlEITNh9NJIX0iSqAaG5jwTWzS6T2xFb84asfHb2lw/iDzmJ6jR6EQIF3HK6pEc3DUoRW0Mkl+PocVlcZmbAIuNqRJZ64xetA0u0RhuOqVXthBF9aJmlGf5MXXzFwR65hdeDKLce69N9ipSuOHBIM9vdOVb+8Uyrp2Pyi8I8QB760RYUDSnCXtB3P1tO28dc9hT+dUTIrfKA0wW09bqxHIxgOn18pUBPbRsDfKoDFM7uaI3IL8BrYu8DKS0DmGuex7g7aeSlLhU+5qcWfrmhPC0=',
-                          'body': '{"job_id": "4469f85c-a64f-4a7c-9a49-9c811197fbbf", '
-                                  '"s3_path": "e0ab34e7-0cbc-425d-9ed6-409f60ecaa6d/deep_learning_models.zip", '
-                                  '"entry_point": "bert_qa_preprocess_and_finetune_script.py", '
-                                  '"train_arguments": ""}',
-                          'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1692947727248',
-                                         'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon',
-                                         'ApproximateFirstReceiveTimestamp': '1692947732248'}, 'messageAttributes': {},
-                          'md5OfBody': 'e4ed6681fe1d9b6f9d7a78200c83ff0f', 'eventSource': 'aws:sqs',
-                          'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue',
-                          'awsRegion': 'us-west-2'}]}
+    event = {'Records': [{'messageId': 'f9f59208-6ea5-4907-bc4c-e044a8321ad8', 'receiptHandle': 'AQEBURs66VUwJN42hG3RW8xZqURKk3+npWNCg3ihOpY+oriWMlIRiz3b7UGrbb/IZq6KtjCFgmE0vpJdrkjSFisYKt3M54iUDbsPa1sQx5VqTB8CQXdt/SNPFgiVr5D2CcHubilJotQgwTe4pcyHleMY+528Q69tcevCyPuzB5yWGLY6rgEnGaHvEXuxFh1+ukoJ0ssBbRXDnsbYJMz6Id7A2jONX4e1I+5zszoJalhMXaQqpGl8X2nGd94HynrF1su8CuIdlj6ZK/oAt7KDUWwAoC5v0EMrk0PIpi5lHYXHgy2BJIWF0B40E1tgP4bwu+15jj8bPzFwB43vjratPO4sK57uQykXqfI6QTgFqip/7J9oOxiptAzjKLYgzBxuUjpUQau7g1x+uft9p8cxyivOYtZ4eRmhZji6qGEYAnUKYpc=', 'body': '{"job_id": "f1a189ff-4545-4b8c-9fe7-70aa14911e46", "s3_path": "069b4da4-af6d-439d-bb0d-f46f3d41a647/Archive.zip", "entry_point": "main.py", "train_arguments": ""}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1698996775365', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1698996780365'}, 'messageAttributes': {}, 'md5OfBody': '60081ad9558d4b0d9efd9624708926b0', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
 
-    event = {'Records': [{'messageId': '0f53b920-eec0-4c2e-8899-a196194a428b', 'receiptHandle': 'AQEBz1khCgIKXe9S2AKxqtSaMxFEdgKJXEUad+gOtE9Uupompag7R/yJKOCpBgHujNzeJwtWVn2rssfOD/4KWuNLFPyoOlRYLsMv/dzD8RHPR4IcS5xxAxv49oy8MUlGTmdJAxt/tz0TjkADF6dZEO3AUPw6j5Q8W/FBYgnigkMInicwtp5o4PCzhEyfTEA8MlJ2TYH9DVfsdwNKuxl/a1k8rb6YE94sSKBG4Wy9yObbo/RS36Qi5yh7f/QnN/xNW/EnowusvZNvfqteF4O8kvOgsjYjTO/IGWEjrFYjt1Gebq9KqP/+eke9AD85YS6OEMQY2K7TFRtBnzzRn1LH0yIIQgGMTTY2ayvPau0SRyvQeYBzZVH5/xNmYukzxvLZzyN/l3EYc4Xqad1r+5m2e3xDmj8xo6hGc7KjU7vHDSgvtjg=', 'body': '{"job_id": "867600c9-24b5-4c66-920e-b2a61dd1fccf", "s3_path": "3ecc3893-748b-4161-a484-8561535e7960/torch_resnet_custom_ddp_automated.tar.gz", "entry_point": "train_dist.py", "train_arguments": "--data /netmind_train/datasets/867600c9-24b5-4c66-920e-b2a61dd1fccf"}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1694750022912', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1694750027913'}, 'messageAttributes': {}, 'md5OfBody': 'e65f54f393b6c58c98e1b658034deae3', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
     handler(event, None)
 
 
