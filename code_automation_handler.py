@@ -124,7 +124,7 @@ from template_platform import (
     CodePlatform,
     PlatformChecker,
 )
-
+from compile.tool import handle_invoked_file
 logger = get_logger(__name__)
 
 
@@ -328,17 +328,67 @@ class CodeAutomationHandler:
 
             max_uncompress_time -= 1
 
-    def __handle_progress_command(self, line):
+    def __parse_run_file(self, origin_line, leading_spaces):
+        #origin_line should be string removed %pattern like  %run script.py --argument 1 ==>  script.py --argument 1
+
+
+        file_name = origin_line.strip().split()[0]
+
+
+        if file_name.find('/') != -1:
+            file_name = file_name.split('/')[-1]
+            print(f"file_name: {file_name.split('/')}")
+
+
+        file_name_without_suffix = file_name.split('.')[0]
+        origin_line = origin_line.replace(file_name, '')
+
+        exist_main = handle_invoked_file(os.getcwd(), file_name)
+
+        pattern = r"\S+"
+        matches_list = re.findall(pattern, origin_line)
+        argv_list = [file_name]
+
+        for argument in matches_list:
+            argv_list.append(argument)
+
+        ret_command = ""
+        ret_command = ' ' * leading_spaces + f'origin_argv = sys.argv\n'
+
+
+
+        argv_command_line = f'sys.argv = {argv_list}\n'
+
+        argv_command_line = argv_command_line.replace('"{', 'f"{')
+        argv_command_line = argv_command_line.replace("'{", "f'{")
+        ret_command += ' ' * leading_spaces + argv_command_line
+        ret_command += ' ' * leading_spaces + f'import {file_name_without_suffix}\n'
+        if exist_main:
+            ret_command += ' ' * leading_spaces + f'{file_name_without_suffix}.entry()\n'
+        ret_command += ' ' * leading_spaces + 'sys.argv = origin_argv\n'
+        return ret_command
+
+    def __handle_progress_command(self, line, leading_spaces):
         progress_command = ['tar', 'zip', 'unzip', 'wget']
+        exec_command = 'python'
         null_pattern = "1>/dev/null 2>&1"
-        for command in progress_command:
-            if line.find(command) != -1:
-                return f'os.system(f\'{line.strip()} {null_pattern}\')\n'
-        return f'os.system(f\'{line.strip()} \')\n'
+
+        first_command = line.split()[0]
+        ret_line = ""
+
+        if first_command in progress_command:
+            ret_line = ' ' * leading_spaces + f'os.system(f\'{line.strip()} {null_pattern}\')\n'
+        elif first_command == exec_command:
+
+            ret_line = self.__parse_run_file(line.replace(exec_command, ''), leading_spaces)
+        else:
+            ret_line = ' ' * leading_spaces + f'os.system(f\'{line.strip()} \')\n'
+        return ret_line
 
     def remove_prefix(self, line):
         exclamation_point = '!'
         percent_sign_with_cd = '%cd'
+        percent_sign_with_run = '%run'
         percent_sign = '%'
         double_percent_sign = '%%'
         legal_percent_sign_list = ['%pwd', '%ls', '%cp', '%mv', '%mkdir',
@@ -353,10 +403,10 @@ class CodeAutomationHandler:
 
 
         if without_leading_spaces_line.startswith(exclamation_point):
-            line = line.replace(exclamation_point, '').rstrip()
+            line = line.replace(exclamation_point, '').strip()
 
-            line = self.__handle_progress_command(line)
-            special_pattern = True
+            line = self.__handle_progress_command(line, leading_spaces)
+            return line
 
         elif without_leading_spaces_line.startswith(percent_sign):
             line = line.rstrip()
@@ -365,6 +415,10 @@ class CodeAutomationHandler:
             elif without_leading_spaces_line.startswith(percent_sign_with_cd):
                 line = line.replace(percent_sign_with_cd, '')
                 line = f'os.chdir(f\'{line.strip()}\')\n'
+            elif without_leading_spaces_line.startswith(percent_sign_with_run):
+                line = line.replace(percent_sign_with_run, '')
+                line = self.__parse_run_file(line, leading_spaces)
+                return line
             else:
                 word_list = without_leading_spaces_line.split('\n')[0].split(' ')
 
@@ -390,13 +444,15 @@ class CodeAutomationHandler:
 
             with open(target_file, "w+") as py_file:
                 py_file.write('import os\n')
+                py_file.write('import sys\n')
                 for cell in code["cells"]:
                     if cell["cell_type"] == "code":
                         for line in cell["source"]:
                             line = self.remove_prefix(line)
                             py_file.write(line)
                         py_file.write("\n")
-
+            print(f'py_file: {py_file}')
+            raise
             os.system(f"rm {file}")
     """
     def check(self, event):
@@ -727,8 +783,7 @@ if __name__ == '__main__':
         "action": "check",
         "payload":
             {
-                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
-
+                "code_file": "https://protagolabs-netmind-job-model-code-test.s3.amazonaws.com/002bfca4-6256-4806-a9f2-4e0efc219dae/sovits4_colab.ipynb"
             }
     }
 

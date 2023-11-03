@@ -85,4 +85,20 @@ def lambda_invoke_inner(function, payload, async_call=False):
         return json.load(response["Payload"])
     return None
 
+def handle_invoked_file(code_dir, file_name):
+    exist_pattern = False
+    entry_point_file = os.path.join(code_dir, file_name)
+    with open(entry_point_file, 'r+') as f:
+        pattern = "if __name__ == \'__main__\':"
+        lines = f.readlines()
+        f.truncate(0)
+        for index, line in enumerate(lines):
+            if lines[index].startswith(pattern):
+                exist_pattern = True
+                print(f'{pattern} exist in {lines[index]}')
+                lines[index] = lines[index].replace(pattern, "def entry():")
+                break
+        f.seek(0)
+        f.writelines(lines)
+    return exist_pattern
 
