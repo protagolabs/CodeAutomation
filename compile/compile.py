@@ -52,7 +52,8 @@ class CodeBuilder:
         argument_list = self.arguments.split(' ')
         str_argument_list = [self.entry_point_file]
         for argument in argument_list:
-            str_argument_list.append(str(argument))
+            if len(argument) > 0:
+                str_argument_list.append(str(argument))
         command_argv = f'sys.argv = {str_argument_list}'
         logger.info(f'command_argv {command_argv}')
 
