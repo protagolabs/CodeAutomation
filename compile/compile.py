@@ -63,6 +63,8 @@ class CodeBuilder:
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
             for line in lines:
+                if line.find('__future__') != -1:
+                    continue
                 f.write(line)
 
 
@@ -254,6 +256,8 @@ if __name__ == '__main__':
 
     event = {'Records': [{'messageId': '0f53b920-eec0-4c2e-8899-a196194a428b', 'receiptHandle': 'AQEBz1khCgIKXe9S2AKxqtSaMxFEdgKJXEUad+gOtE9Uupompag7R/yJKOCpBgHujNzeJwtWVn2rssfOD/4KWuNLFPyoOlRYLsMv/dzD8RHPR4IcS5xxAxv49oy8MUlGTmdJAxt/tz0TjkADF6dZEO3AUPw6j5Q8W/FBYgnigkMInicwtp5o4PCzhEyfTEA8MlJ2TYH9DVfsdwNKuxl/a1k8rb6YE94sSKBG4Wy9yObbo/RS36Qi5yh7f/QnN/xNW/EnowusvZNvfqteF4O8kvOgsjYjTO/IGWEjrFYjt1Gebq9KqP/+eke9AD85YS6OEMQY2K7TFRtBnzzRn1LH0yIIQgGMTTY2ayvPau0SRyvQeYBzZVH5/xNmYukzxvLZzyN/l3EYc4Xqad1r+5m2e3xDmj8xo6hGc7KjU7vHDSgvtjg=', 'body': '{"job_id": "867600c9-24b5-4c66-920e-b2a61dd1fccf", "s3_path": "3ecc3893-748b-4161-a484-8561535e7960/torch_resnet_custom_ddp_automated.tar.gz", "entry_point": "train_dist.py", "train_arguments": "--data /netmind_train/datasets/867600c9-24b5-4c66-920e-b2a61dd1fccf"}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1694750022912', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1694750027913'}, 'messageAttributes': {}, 'md5OfBody': 'e65f54f393b6c58c98e1b658034deae3', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
     handler(event, None)
+
+
 
 
 
