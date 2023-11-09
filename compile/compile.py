@@ -59,11 +59,34 @@ class CodeBuilder:
         with open(entry_point_file, 'r') as f:
             lines = f.readlines()
 
+        quotes_appear = False
+        sys_argv_written = False
+        import_appear = False
+
         with open(entry_point_file, 'w') as f:
-            f.write(f'import sys\n')
-            f.write(f'{command_argv}\n')
+
             for line in lines:
                 f.write(line)
+                if sys_argv_written:
+                    continue
+
+                #handle module docstring
+                if line.startswith('"""') or line.startswith("'''") or quotes_appear:
+                    quotes_appear = not quotes_appear
+                    continue
+
+
+                lstrip_of_line = line.strip()
+                if lstrip_of_line.startswith('from') or lstrip_of_line.startswith('import'):
+                    import_appear = True
+                else:
+                    if import_appear:
+                        f.write(f'import sys\n')
+                        f.write(f'{command_argv}\n')
+                        sys_argv_written = True
+
+        print(f'write to {entry_point_file} finish')
+        raise
 
 
     def download_code(self):
@@ -176,7 +199,7 @@ class CodeBuilder:
 
         self.__execute_command(command_compile_binary_package)
         logger.info(f'execute command {command_compile_binary_package} finish')
-
+        raise
         endtime = datetime.datetime.now()
         logger.info(f'command cost : {endtime - starttime}')
 
@@ -237,22 +260,11 @@ def handler(event, context):
         job_event_dao.quick_insert(job_id, 'failed', EventLevel.ERROR, event_msg)
         param = {'job_id': job_id, 'success': False}
         logger.info(f'send {param} to {LAMBDA_PREPARE_COMPLETE}')
-        lambda_invoke(LAMBDA_PREPARE_COMPLETE, param)
+        #lambda_invoke(LAMBDA_PREPARE_COMPLETE, param)
 
 if __name__ == '__main__':
-    event = {'Records': [{'messageId': '05950022-edbb-4468-bcca-8e0dee6d6542', 'receiptHandle': 'AQEBxRUrmYkA00cSxN5tkNQQ48TDpdUxIauIBJEiBSUhw0PwrZkTauy4G3qbGq9umnGQSRAwmUBlu4KM89FLz7c+0b8CtwRzSZD3lhOTnBNnhe541/nI2XV6o4SBaVX4pudtRl2bSMbItjS2NG8N+KkZQlEITNh9NJIX0iSqAaG5jwTWzS6T2xFb84asfHb2lw/iDzmJ6jR6EQIF3HK6pEc3DUoRW0Mkl+PocVlcZmbAIuNqRJZ64xetA0u0RhuOqVXthBF9aJmlGf5MXXzFwR65hdeDKLce69N9ipSuOHBIM9vdOVb+8Uyrp2Pyi8I8QB760RYUDSnCXtB3P1tO28dc9hT+dUTIrfKA0wW09bqxHIxgOn18pUBPbRsDfKoDFM7uaI3IL8BrYu8DKS0DmGuex7g7aeSlLhU+5qcWfrmhPC0=',
-                          'body': '{"job_id": "4469f85c-a64f-4a7c-9a49-9c811197fbbf", '
-                                  '"s3_path": "e0ab34e7-0cbc-425d-9ed6-409f60ecaa6d/deep_learning_models.zip", '
-                                  '"entry_point": "bert_qa_preprocess_and_finetune_script.py", '
-                                  '"train_arguments": ""}',
-                          'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1692947727248',
-                                         'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon',
-                                         'ApproximateFirstReceiveTimestamp': '1692947732248'}, 'messageAttributes': {},
-                          'md5OfBody': 'e4ed6681fe1d9b6f9d7a78200c83ff0f', 'eventSource': 'aws:sqs',
-                          'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue',
-                          'awsRegion': 'us-west-2'}]}
+    event = {'Records': [{'messageId': '463c4a03-6af3-4cc5-976b-3a95ecfda703', 'receiptHandle': 'AQEBzCyyg//F++9mcYuxSsauEx9M0Y6U69Qiv/uS8fixW+E8Bmljc61cZZZaj87rY/7F/fT16FJDCb1gwpAU0DeU7w0z1LEU142DENNqFfjge5lH2TqmicdbONsSm0kZ9P6USVMgzfArIglpJ4tp1lji2XiC2kmbiTMmtwyzCpFffVBUp1lIW9lxwR3LC9d6netTZq4Vv7HbGWEB11Ty49zwoWjmzvHRQfcW0PySixVR0qO0k/+JPbtnpby7tC53sbdFZMkMIBnMvOx0oojYWvn3ebDat8xi1+FToHZKLK+t0SfEcKII0StR13K64ET1IE7h81YcvyOU/9yQJY653EwcRVs5snPAMsnWpWaseJZtORW2H6CYlT5CoCNIwiSj36NyoZ0wwBpmm/f3S/ozTonfgq6q5IrLhI+Vm9VMKzqj4/Y=', 'body': '{"job_id": "f60224d6-f862-4dca-aa96-b9555d5076a0", "s3_path": "2de04596-7404-4e78-9bcd-a837668eb630/sample.py", "entry_point": "sample.py", "train_arguments": ""}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1699537236091', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1699537241091'}, 'messageAttributes': {}, 'md5OfBody': '3ed357a3c241e3d6dd02ba70b209970d', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
 
-    event = {'Records': [{'messageId': '0f53b920-eec0-4c2e-8899-a196194a428b', 'receiptHandle': 'AQEBz1khCgIKXe9S2AKxqtSaMxFEdgKJXEUad+gOtE9Uupompag7R/yJKOCpBgHujNzeJwtWVn2rssfOD/4KWuNLFPyoOlRYLsMv/dzD8RHPR4IcS5xxAxv49oy8MUlGTmdJAxt/tz0TjkADF6dZEO3AUPw6j5Q8W/FBYgnigkMInicwtp5o4PCzhEyfTEA8MlJ2TYH9DVfsdwNKuxl/a1k8rb6YE94sSKBG4Wy9yObbo/RS36Qi5yh7f/QnN/xNW/EnowusvZNvfqteF4O8kvOgsjYjTO/IGWEjrFYjt1Gebq9KqP/+eke9AD85YS6OEMQY2K7TFRtBnzzRn1LH0yIIQgGMTTY2ayvPau0SRyvQeYBzZVH5/xNmYukzxvLZzyN/l3EYc4Xqad1r+5m2e3xDmj8xo6hGc7KjU7vHDSgvtjg=', 'body': '{"job_id": "867600c9-24b5-4c66-920e-b2a61dd1fccf", "s3_path": "3ecc3893-748b-4161-a484-8561535e7960/torch_resnet_custom_ddp_automated.tar.gz", "entry_point": "train_dist.py", "train_arguments": "--data /netmind_train/datasets/867600c9-24b5-4c66-920e-b2a61dd1fccf"}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1694750022912', 'SenderId': 'AROAR6WBFNCWKFQGHTV7Y:netmind-services-job-management-test-jobCommon', 'ApproximateFirstReceiveTimestamp': '1694750027913'}, 'messageAttributes': {}, 'md5OfBody': 'e65f54f393b6c58c98e1b658034deae3', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:us-west-2:134622832812:netmind-code-compile-test-queue', 'awsRegion': 'us-west-2'}]}
     handler(event, None)
 
 
