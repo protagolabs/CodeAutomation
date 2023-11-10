@@ -36,16 +36,15 @@ def validate_path(path):
 
 class CodeGenerator(object):
 
-    def __init__(self, job_id, arguments, code_dir):
+    def __init__(self, job_id, code_dir):
         self.job_id = job_id
         self.code_dir = code_dir
         self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
-        self.arguments = arguments
 
 
     def generate_py_file(self, exist_main_function, arguments, entry_point_file):
-        argument_list = arguments.split(' ')
-        str_argument_list = [' ']
+        argument_list = arguments.split()
+        str_argument_list = [entry_point_file]
         for argument in argument_list:
             str_argument_list.append(str(argument))
         command_argv = f'sys.argv = {str_argument_list}'
@@ -74,28 +73,22 @@ class CodeBuilder:
         self.arguments = arguments
 
 
-
     def handle_entry_point(self, code_dir):
+        exist_pattern = False
         entry_point_file = os.path.join(code_dir, self.entry_point_file)
-        argument_list = self.arguments.split(' ')
-        str_argument_list = [self.entry_point_file]
-        for argument in argument_list:
-            if len(argument) > 0:
-                str_argument_list.append(str(argument))
-        command_argv = f'sys.argv = {str_argument_list}'
-        logger.info(f'command_argv {command_argv}')
-
-        with open(entry_point_file, 'r') as f:
+        with open(entry_point_file, 'r+') as f:
+            pattern = "if __name__ == \'__main__\':"
             lines = f.readlines()
-
-        with open(entry_point_file, 'w') as f:
-            f.write(f'import sys\n')
-            f.write(f'{command_argv}\n')
-            for line in lines:
-                if line.find('__future__') != -1:
-                    continue
-                f.write(line)
-
+            f.truncate(0)
+            for index, line in enumerate(lines):
+                if lines[index].startswith(pattern):
+                    exist_pattern = True
+                    logger.info(f'{pattern} exist in {lines[index]}')
+                    lines[index] = lines[index].replace(pattern, "def entry():")
+                    break
+            f.seek(0)
+            f.writelines(lines)
+        return exist_pattern
 
     def download_code(self):
 
@@ -188,7 +181,7 @@ class CodeBuilder:
             raise Exception(f'download code from {self.s3_bucket}:{self.s3_key} failed')
 
 
-        self.handle_entry_point(code_dir)
+        exist_main_function = self.handle_entry_point(code_dir)
 
         compile_path = os.path.join(code_dir, '*')
         if not compress_dir and not code_dir:
@@ -197,10 +190,13 @@ class CodeBuilder:
 
         starttime = datetime.datetime.now()
 
+        # wrap entry point
+        code_generator_impl = CodeGenerator(self.job_id, code_dir)
+        code_generator_impl.generate_py_file(exist_main_function, self.arguments, self.entry_point_file)
 
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
-        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.entry_point_file}')} " \
+        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
         command_compile_binary_package += self.__add_package_name(code_dir)
