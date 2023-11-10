@@ -33,6 +33,34 @@ def validate_path(path):
     if os.path.exists(path):
         raise FileExistsError(f'path {path} already exists')
 
+
+class CodeGenerator(object):
+
+    def __init__(self, job_id, arguments, code_dir):
+        self.job_id = job_id
+        self.code_dir = code_dir
+        self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
+        self.arguments = arguments
+
+
+    def generate_py_file(self, exist_main_function, arguments, entry_point_file):
+        argument_list = arguments.split(' ')
+        str_argument_list = [' ']
+        for argument in argument_list:
+            str_argument_list.append(str(argument))
+        command_argv = f'sys.argv = {str_argument_list}'
+        entry_point_module_name = entry_point_file.split('.')[0]
+        with open(self.target_py_file_name, 'w') as f:
+            f.write(f'import os\n')
+            f.write(f'import sys\n')
+            f.write(f'{command_argv}\n')
+            f.write('if __name__ == "__main__":')
+            f.write(f'  import {entry_point_module_name}\n')
+            if exist_main_function:
+                f.write(f'  {entry_point_module_name}.entry()\n')
+        with open(self.target_py_file_name, 'r') as f:
+            content = f.read()
+
 class CodeBuilder:
     def __init__(self, job_id, s3_path, entry_point, arguments) -> None:
         self.job_id = job_id
@@ -212,6 +240,7 @@ class CodeBuilder:
 
 
 def handler(event, context):
+    os.system('python -m nuitka  --version')
     logger.info(f'receive event: {event}, type: {type(event)}')
     if "Records" not in event:
         raise ValueError(f'invalid format {event}')
