@@ -2,7 +2,7 @@
 #ARG FUNCTION_DIR="/code_automation"
 ARG FUNCTION_DIR="/code_automation"
 
-FROM python:3.10 as build-image
+FROM ubuntu:20.04 as build-image
 
    
 
@@ -19,7 +19,7 @@ RUN pip install \
         awslambdaric
 
 # Use a slim version of the base Python image to reduce the final image size
-FROM python:3.10
+FROM ubuntu:20.04
 
 
 RUN apt-get update && apt-get install -y --no-install-recommends --force-yes \
