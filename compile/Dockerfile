@@ -13,15 +13,6 @@ ARG FUNCTION_DIR
 RUN mkdir -p ${FUNCTION_DIR}
 COPY . ${FUNCTION_DIR}
 
-# Install the function's dependencies
-RUN pip install \
-    --target ${FUNCTION_DIR} \
-        awslambdaric
-
-# Use a slim version of the base Python image to reduce the final image size
-FROM ubuntu:20.04
-
-
 RUN apt-get update && apt-get install -y --no-install-recommends --force-yes \
   build-essential \
   wget \
@@ -39,14 +30,10 @@ RUN conda install python==3.10 pip libpython-static && \
     conda clean --all
 ENV PYTHONHOME="/opt/conda"
 
-
 # Include global arg in this stage of the build
 ARG FUNCTION_DIR
 # Set working directory to function root directory
 WORKDIR ${FUNCTION_DIR}
-
-# Copy in the built dependencies
-COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
 
 RUN pip install -r requirements.txt
 # Aws container forbid user write data except directory /tmp, nuitka will  generate ccache directory in /home/user default
@@ -55,6 +42,9 @@ RUN pip install -r requirements.txt
 
 ENV NUITKA_CACHE_DIR=/tmp
 
+RUN pip install \
+    --target ${FUNCTION_DIR} \
+        awslambdaric
 
 # Set runtime interface client as default command for the container runtime
 ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
