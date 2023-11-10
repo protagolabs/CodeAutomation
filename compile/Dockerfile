@@ -35,7 +35,7 @@ RUN wget --no-check-certificate https://repo.anaconda.com/miniconda/Miniconda3-l
 bash install_miniconda.sh -b -p /opt/conda && rm install_miniconda.sh
 
 ENV PATH="/opt/conda/bin:${PATH}"
-RUN conda install python==3.8 pip && \
+RUN conda install python==3.10 pip && \
     conda clean --all
 ENV PYTHONHOME="/opt/conda"
 
