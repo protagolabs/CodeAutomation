@@ -39,7 +39,6 @@ class CodeGenerator(object):
     def __init__(self, job_id, code_dir):
         self.job_id = job_id
         self.code_dir = code_dir
-        self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
 
 
     def generate_shell_file(self, exist_main_function, arguments, entry_point_file):
@@ -49,7 +48,8 @@ class CodeGenerator(object):
             str_argument_list.append(str(argument))
         command_argv = f'sys.argv = {str_argument_list}'
         entry_point_module_name = entry_point_file.split('.')[0]
-        with open(self.target_py_file_name, 'w') as f:
+        target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
+        with open(target_py_file_name, 'w') as f:
             f.write(f'import os\n')
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
@@ -57,8 +57,8 @@ class CodeGenerator(object):
             f.write(f'  import {entry_point_module_name}\n')
             if exist_main_function:
                 f.write(f'  {entry_point_module_name}.entry()\n')
-        with open(self.target_py_file_name, 'r') as f:
-            content = f.read()
+        return target_py_file_name
+
 
 class CodeBuilder:
     def __init__(self, job_id, s3_path, entry_point, arguments) -> None:
@@ -107,6 +107,7 @@ class CodeBuilder:
 
 
             final_file_name = uncompress_code(self.s3_key, write_obj, temp_dir)
+
             if final_file_name:
                 self.entry_point_file = final_file_name
 
@@ -192,11 +193,11 @@ class CodeBuilder:
 
         # wrap entry point
         code_generator_impl = CodeGenerator(self.job_id, code_dir)
-        code_generator_impl.generate_shell_file(exist_main_function, self.arguments, self.entry_point_file)
+        target_py_file_name = code_generator_impl.generate_shell_file(exist_main_function, self.arguments, self.entry_point_file)
 
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
-        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
+        command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, target_py_file_name )} " \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
 

@@ -57,7 +57,7 @@ def uncompress_code(suffix_name, file_path, dest):
         final_file_name = get_transformed_entry_file_name(suffix_name)
         dir_name = os.path.dirname(file_path)
         src_file_name = os.listdir(dir_name)[0]
-        import  shutil
+        import shutil
         shutil.move(os.path.join(dir_name, src_file_name), os.path.join(dest, final_file_name))
     return final_file_name
 
