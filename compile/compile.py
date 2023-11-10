@@ -42,7 +42,7 @@ class CodeGenerator(object):
         self.target_py_file_name = os.path.join(self.code_dir, f'{self.job_id}.py')
 
 
-    def generate_py_file(self, exist_main_function, arguments, entry_point_file):
+    def generate_shell_file(self, exist_main_function, arguments, entry_point_file):
         argument_list = arguments.split()
         str_argument_list = [entry_point_file]
         for argument in argument_list:
@@ -53,7 +53,7 @@ class CodeGenerator(object):
             f.write(f'import os\n')
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
-            f.write('if __name__ == "__main__":')
+            f.write('if __name__ == "__main__":\n')
             f.write(f'  import {entry_point_module_name}\n')
             if exist_main_function:
                 f.write(f'  {entry_point_module_name}.entry()\n')
@@ -192,13 +192,14 @@ class CodeBuilder:
 
         # wrap entry point
         code_generator_impl = CodeGenerator(self.job_id, code_dir)
-        code_generator_impl.generate_py_file(exist_main_function, self.arguments, self.entry_point_file)
+        code_generator_impl.generate_shell_file(exist_main_function, self.arguments, self.entry_point_file)
 
 
         binary_run_file = os.path.join('/tmp','binary_run_file')
         command_compile_binary_package = f"python -m nuitka {os.path.join(code_dir, f'{self.job_id}.py')} " \
                                          f" --include-plugin-files={compile_path} " \
                                          f"--output-filename={binary_run_file} --output-dir=/tmp --remove-output"
+
         command_compile_binary_package += self.__add_package_name(code_dir)
 
         self.__execute_command(command_compile_binary_package)
