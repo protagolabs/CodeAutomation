@@ -257,8 +257,8 @@ def handler(event, context):
         build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
     except Exception as e:
-        event_msg = str(e)
-        logger.error(event_msg)
+        event_msg = 'Code compile failed.'
+        logger.error(str(e))
         import traceback
         traceback.print_exc()
 
