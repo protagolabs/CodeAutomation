@@ -14,7 +14,31 @@ sys.path.append("..")
 from dynamodb.job_event import job_event_dao, EventLevel
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        if hasattr(record, "origin_created"):
+            record.created = record.origin_created
+            record.msecs = (record.created - int(record.created)) * 1000
+
+        if record.levelno != logging.INFO or os.getenv("NETMIND_ALWAYS_LOG_CALLER", True):
+            if not hasattr(record, "caller"):
+                record.caller = f"{record.name}.{record.funcName}:{record.lineno}"
+            record.caller_block = f" [{record.caller}]"
+        else:
+            record.caller_block = ""
+
+        return super().format(record)
+
+formatter = CustomFormatter(
+    fmt="{asctime}.{msecs:03.0f} [{levelname}]{caller_block} {message}",
+    style="{",
+    datefmt="%b %d %H:%M:%S",
+)
+_default_handler = logging.StreamHandler()
+_default_handler.setFormatter(formatter)
+
+logger.addHandler(_default_handler)
 logger.propagate = False
 logger.setLevel(os.getenv("NETMIND_LOGLEVEL", "INFO"))
 
@@ -64,8 +88,6 @@ class CodeBuilder:
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
             for line in lines:
-                if line.find('__future__') != -1:
-                    continue
                 f.write(line)
 
 
