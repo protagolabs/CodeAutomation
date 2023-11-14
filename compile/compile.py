@@ -254,8 +254,8 @@ def handler(event, context):
         build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
     except Exception as e:
-        event_msg = str(e)
-        logger.error(event_msg)
+        logger.error(str(e))
+        event_msg = 'code build procedure failed.'
         import traceback
         traceback.print_exc()
 
