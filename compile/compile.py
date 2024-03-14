@@ -28,7 +28,6 @@ class CustomFormatter(logging.Formatter):
             record.caller_block = ""
 
         return super().format(record)
-    
 formatter = CustomFormatter(
     fmt="{asctime}.{msecs:03.0f} [{levelname}]{caller_block} {message}",
     style="{",
@@ -86,8 +85,6 @@ class CodeBuilder:
             f.write(f'import sys\n')
             f.write(f'{command_argv}\n')
             for line in lines:
-                if line.find('__future__') != -1:
-                    continue
                 f.write(line)
 
 
@@ -254,8 +251,8 @@ def handler(event, context):
         build = CodeBuilder(job_id, s3_path, entry_point, train_arguments)
         build.build()
     except Exception as e:
-        event_msg = str(e)
-        logger.error(event_msg)
+        logger.error(str(e))
+        event_msg = 'code build procedure failed.'
         import traceback
         traceback.print_exc()
 

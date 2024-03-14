@@ -1,8 +1,8 @@
 import ast
+import glob
 import json
 import os
 import re
-import glob
 import shutil
 import tarfile
 import tempfile
@@ -14,58 +14,32 @@ try:
     from AwsServices import aws
     from beans.Ret import Ret
     from Const import (
-        AwsArn,
         AwsS3,
-        AwsSQS,
-        Config,
         HttpCode,
-        JobStatus,
-        Platform,
-        UserLimitConfig,
     )
     from errors.CustomExceptions import (
         AwsServiceOperationException,
         ResourceNotFoundException,
         StatusCheckFailedException,
     )
-    from KubernetesServices import k8s
     from Logging import get_logger
-    from service.Web3Service import JobType, web3_service
     from utils.Tools import dir_to_json, todict, uncompress_code
 except ModuleNotFoundError:
     from boto3_layer.python.AwsServices import aws
     from boto3_layer.python.Const import (
-        AwsArn,
         AwsS3,
-        AwsSQS,
-        Config,
         HttpCode,
-        JobStatus,
-        Platform,
-        UserLimitConfig,
     )
     from boto3_layer.python.Logging import get_logger
-    from k8s_layer.python.KubernetesServices import k8s
     from webkit_layer.python.beans.Ret import Ret
     from webkit_layer.python.errors.CustomExceptions import (
         AwsServiceOperationException,
         ResourceNotFoundException,
         StatusCheckFailedException,
     )
-    from webkit_layer.python.service.Web3Service import JobType, web3_service
     from webkit_layer.python.utils.Tools import dir_to_json, todict, uncompress_code
 
 
-from automation_common.bean.domain.CodeStructureDo import CodeStructureDo
-from automation_common.dao.CodeStructureDao import code_structure_dao
-
-from automation_common.JobConst import (
-    FileLoc,
-    Regex,
-
-)
-
-from automation_common.Messages import msg
 from auto_complete.hivemind_mlm_handler import (
     HivemindCallbackMonitorHandler,
     hm_mlm_callback_code_injection_list,
@@ -80,49 +54,54 @@ from auto_complete.hivemind_resnet_handler import (
 )
 from auto_complete.tensorflow_custom import (
     TensorflowCustomHandler,
-    tf_custom_code_injection_list,
+    init_custom_tf_injection_list,
     tensorflow_custom_visited_table,
-    init_custom_tf_injection_list
+    tf_custom_code_injection_list,
 )
 from auto_complete.tensorflow_trainer import (
     TensorflowTrainerHandler,
-    tf_trainer_code_injection_list,
+    init_callback_tf_injection_list,
     tensorflow_trainer_visited_table,
-    init_callback_tf_injection_list
+    tf_trainer_code_injection_list,
 )
 from auto_complete.tool import (
     CodeNotCompliantException,
-    DuplicateInjectionError,
+    CodeTemplateNotLegalException,
     InjectionOperation,
-    CodeTemplateNotLegalException
 )
 from auto_complete.torch_custom_with_eval import (
     TorchCustomWithEvalTrainDistHandler,
     TorchCustomWithEvalTrainerHandler,
+    init_custom_with_eval_injection_list,
+    pytorch_resnet_custom_visited_table,
     torch_cus_eval_dist_code_injection_list,
     torch_cus_eval_trainer_code_injection_list,
-    pytorch_resnet_custom_visited_table,
-    init_custom_with_eval_injection_list
 )
 from auto_complete.torch_custom_without_eval import (
     TorchCustomWithOutEvalTrainDistHandler,
     TorchCustomWithOutEvalTrainerHandler,
+    init_custom_without_eval_injection_list,
+    pytorch_mlm_custom_visited_table,
     torch_no_eval_dist_code_injection_list,
     torch_no_eval_trainer_code_injection_list,
-    pytorch_mlm_custom_visited_table,
-    init_custom_without_eval_injection_list
 )
 from auto_complete.torch_trainer import (
     TorchTrainerHandler,
+    init_transformers_injection_list,
+    pytorch_trainer_visited_table,
     torch_trainer_dist_code_injection_list,
     torch_trainer_trainer_code_injection_list,
-    pytorch_trainer_visited_table,
-    init_transformers_injection_list
 )
-from template_checker import CodeChecker
+from automation_common.bean.domain.CodeStructureDo import CodeStructureDo
+from automation_common.dao.CodeStructureDao import code_structure_dao
+from automation_common.JobConst import (
+    FileLoc,
+    Regex,
+)
+from automation_common.Messages import msg
+from common.security import contain_miner_code
 from template_platform import (
     CodePlatform,
-    PlatformChecker,
 )
 
 logger = get_logger(__name__)
@@ -175,7 +154,7 @@ class CodeAutomationHandler:
                     TorchCustomWithEvalTrainerHandler,
                 ],
                 pytorch_resnet_custom_visited_table,
-                init_custom_with_eval_injection_list
+                init_custom_with_eval_injection_list,
             ),
             CodePlatform.PYTORCH_CUSTOM_TRAINER: (
                 ["train_dist.py", "trainer.py"],
@@ -188,7 +167,7 @@ class CodeAutomationHandler:
                     TorchCustomWithOutEvalTrainerHandler,
                 ],
                 pytorch_mlm_custom_visited_table,
-                init_custom_without_eval_injection_list
+                init_custom_without_eval_injection_list,
             ),
             CodePlatform.PYTORCH_TRANSFORMERS_TRAINER: (
                 ["train_dist.py", "trainer.py"],
@@ -198,9 +177,8 @@ class CodeAutomationHandler:
                 ],
                 TorchTrainerHandler,
                 pytorch_trainer_visited_table,
-                init_transformers_injection_list
+                init_transformers_injection_list,
             ),
-
             CodePlatform.HIVEMIND_CUSTOM_TRAINER: (
                 ["optimizer.py", "run_trainer.py", "trainer.py"],
                 [
@@ -221,7 +199,6 @@ class CodeAutomationHandler:
                 [hm_mlm_callback_code_injection_list],
                 [HivemindCallbackMonitorHandler],
             ),
-
         }
 
         if code_platform not in update_file_dict.keys():
@@ -235,7 +212,7 @@ class CodeAutomationHandler:
         for value in visited_table.values():
             value[0] = False
 
-        #for meta_list in update_file_dict[code_platform][1]:
+        # for meta_list in update_file_dict[code_platform][1]:
         #    meta_list
         update_file_dict[code_platform][4]()
         delay_insertion_table = {}
@@ -248,7 +225,7 @@ class CodeAutomationHandler:
 
             ast_root = ast.parse(open(target_file).read())
 
-            print(f'meta list : {update_file_dict[code_platform][1][index]}')
+            print(f"meta list : {update_file_dict[code_platform][1][index]}")
             if isinstance(update_file_dict[code_platform][2], list):
                 update_file_dict[code_platform][2][index]().visit(ast_root)
             else:
@@ -256,7 +233,6 @@ class CodeAutomationHandler:
 
             logger.info(f"visit file  {target_file} success")
             ast.fix_missing_locations(ast_root)
-
 
             sorted_code_list = sorted(
                 update_file_dict[code_platform][1][index],
@@ -272,10 +248,10 @@ class CodeAutomationHandler:
                     )
                     if elem.operation == InjectionOperation.ADD:
                         # if insert in lastest line, must confirm there exists \n character after last line
-                        if elem.insert_expr[-1] != '\n':
+                        if elem.insert_expr[-1] != "\n":
                             # print(f'elem.insert_line_no : {elem.insert_line_no}, elem.insert_expr: {elem.insert_expr}')
                             # lines.insert(elem.insert_line_no, "\n")
-                            lines[elem.insert_line_no - 1] += '\n'
+                            lines[elem.insert_line_no - 1] += "\n"
                         lines.insert(
                             elem.insert_line_no,
                             " " * elem.col_offset + elem.insert_expr + "\n",
@@ -285,43 +261,50 @@ class CodeAutomationHandler:
                 s = "".join(lines)
             delay_insertion_table[target_file] = s
 
-        for k,v in delay_insertion_table.items():
+        for k, v in delay_insertion_table.items():
             with open(k, "w") as f:
                 f.write(v)
 
-        logger.info(f'visited_table.values() : {visited_table.values()}')
+        logger.info(f"visited_table.values() : {visited_table.values()}")
         for item in visited_table.values():
             if not item[0]:
                 if item[1] not in missing_feature_point_list:
                     missing_feature_point_list.append(item[1])
         if len(missing_feature_point_list) > 0:
-            str_missing_feature_point = '\n'.join(missing_feature_point_list)
+            str_missing_feature_point = "\n".join(missing_feature_point_list)
 
-            logger.error(f'error str_missing_feature_point:{str_missing_feature_point}')
-            raise CodeTemplateNotLegalException(f'missing \n {str_missing_feature_point}')
+            logger.error(f"error str_missing_feature_point:{str_missing_feature_point}")
+            raise CodeTemplateNotLegalException(
+                f"missing \n {str_missing_feature_point}"
+            )
 
         return
 
     def handle_compressed_package(self, destination_dir):
         max_uncompress_time = 5
-        suffix_pattern = ['.zip', '.tar.gz', '.tar']
+        suffix_pattern = [".zip", ".tar.gz", ".tar"]
         compress_record_table = {}
-        not_exits_any_comressed_file = False
         while max_uncompress_time > 0:
             compress_record_table[str(max_uncompress_time)] = {}
             for pattern in suffix_pattern:
-                glob_list = glob.glob(f'{destination_dir}/**/*{pattern}', recursive=True)
+                glob_list = glob.glob(
+                    f"{destination_dir}/**/*{pattern}", recursive=True
+                )
                 if len(glob_list) > 0:
                     compress_record_table[str(max_uncompress_time)][pattern] = True
                 else:
                     compress_record_table[str(max_uncompress_time)][pattern] = False
-                logger.info(f'max_uncompress_time: {max_uncompress_time}, glob_list: {glob_list},  pattern:{pattern}, destination_dir:{destination_dir}')
+                logger.info(
+                    f"max_uncompress_time: {max_uncompress_time}, glob_list: {glob_list},  pattern:{pattern}, destination_dir:{destination_dir}"
+                )
                 for matched_file in glob_list:
                     matched_file_dir_name = os.path.dirname(matched_file)
                     uncompress_code(matched_file, matched_file_dir_name)
-                    logger.debug(f'uncompress {matched_file} to {matched_file_dir_name}')
-                    os.system(f'rm {matched_file}')
-            #whther skip this loop
+                    logger.debug(
+                        f"uncompress {matched_file} to {matched_file_dir_name}"
+                    )
+                    os.system(f"rm {matched_file}")
+            # whther skip this loop
             vals = compress_record_table[str(max_uncompress_time)].values()
             if True not in vals:
                 break
@@ -329,31 +312,40 @@ class CodeAutomationHandler:
             max_uncompress_time -= 1
 
     def __handle_progress_command(self, line):
-        progress_command = ['tar', 'zip', 'unzip', 'wget']
+        progress_command = ["tar", "zip", "unzip", "wget"]
         null_pattern = "1>/dev/null 2>&1"
         for command in progress_command:
             if line.find(command) != -1:
-                return f'os.system(f\'{line.strip()} {null_pattern}\')\n'
-        return f'os.system(f\'{line.strip()} \')\n'
+                return f"os.system(f'{line.strip()} {null_pattern}')\n"
+        return f"os.system(f'{line.strip()} ')\n"
 
     def remove_prefix(self, line):
-        exclamation_point = '!'
-        percent_sign_with_cd = '%cd'
-        percent_sign = '%'
-        double_percent_sign = '%%'
-        legal_percent_sign_list = ['%pwd', '%ls', '%cp', '%mv', '%mkdir',
-                                    '%rm', '%rmdir', '%cat', '%pip', '%conda', '%env', '%setenv']
-
+        exclamation_point = "!"
+        percent_sign_with_cd = "%cd"
+        percent_sign = "%"
+        double_percent_sign = "%%"
+        legal_percent_sign_list = [
+            "%pwd",
+            "%ls",
+            "%cp",
+            "%mv",
+            "%mkdir",
+            "%rm",
+            "%rmdir",
+            "%cat",
+            "%pip",
+            "%conda",
+            "%env",
+            "%setenv",
+        ]
 
         leading_spaces = len(line) - len(line.lstrip())
         without_leading_spaces_line = line.lstrip()
 
-
         special_pattern = False
 
-
         if without_leading_spaces_line.startswith(exclamation_point):
-            line = line.replace(exclamation_point, '').rstrip()
+            line = line.replace(exclamation_point, "").rstrip()
 
             line = self.__handle_progress_command(line)
             special_pattern = True
@@ -361,35 +353,41 @@ class CodeAutomationHandler:
         elif without_leading_spaces_line.startswith(percent_sign):
             line = line.rstrip()
             if without_leading_spaces_line.startswith(double_percent_sign):
-                line = f'#{line}\n'
+                line = f"#{line}\n"
             elif without_leading_spaces_line.startswith(percent_sign_with_cd):
-                line = line.replace(percent_sign_with_cd, '')
-                line = f'os.chdir(f\'{line.strip()}\')\n'
+                line = line.replace(percent_sign_with_cd, "")
+                line = f"os.chdir(f'{line.strip()}')\n"
             else:
-                word_list = without_leading_spaces_line.split('\n')[0].split(' ')
+                word_list = without_leading_spaces_line.split("\n")[0].split(" ")
 
                 first_word = word_list[0]
                 if first_word in legal_percent_sign_list:
-                    line = line.replace(percent_sign, '')
-                    line = f'os.system(f\'{line.strip()} \')\n'
+                    line = line.replace(percent_sign, "")
+                    line = f"os.system(f'{line.strip()} ')\n"
                 else:
-                    line = f'pass\n'
+                    line = "pass\n"
             special_pattern = True
         if special_pattern:
-            line = ' ' * leading_spaces + line
+            line = " " * leading_spaces + line
         return line
 
+    def handle_security(self, temp_dir):
+        for file in glob.glob(f"{temp_dir}/**/*.py", recursive=True):
+            code = open(file)
+            if contain_miner_code(code.read()):
+                raise Exception(f"contain miner code in {file}, please check")
+
     def handle_ipynb(self, temp_dir):
-        for file in glob.glob(f'{temp_dir}/**/*.ipynb', recursive=True):
+        for file in glob.glob(f"{temp_dir}/**/*.ipynb", recursive=True):
 
             code = json.load(open(file))
             dirname = os.path.dirname(file)
             fine_name = os.path.basename(file)
-            file_name = fine_name.split('.')[0] + '.py'
+            file_name = fine_name.split(".")[0] + ".py"
             target_file = os.path.join(dirname, file_name)
 
             with open(target_file, "w+") as py_file:
-                py_file.write('import os\n')
+                py_file.write("import os\n")
                 for cell in code["cells"]:
                     if cell["cell_type"] == "code":
                         for line in cell["source"]:
@@ -398,6 +396,7 @@ class CodeAutomationHandler:
                         py_file.write("\n")
 
             os.system(f"rm {file}")
+
     """
     def check(self, event):
         self.payload_check(event)
@@ -521,6 +520,7 @@ class CodeAutomationHandler:
             "structure": code_structure_do.structure,
         }
     """
+
     def check(self, event):
         self.payload_check(event)
         if not event["payload"].get("code_file"):
@@ -539,17 +539,20 @@ class CodeAutomationHandler:
         logger.info(f"downloading {AwsS3.S3_JOB_MODEL_CODE_BUCKET} by key : {s3_key}")
 
         tf = None
-        if s3_key.endswith('.tar') or s3_key.endswith('.tar.gz') or s3_key.endswith('.zip'):
+        if (
+            s3_key.endswith(".tar")
+            or s3_key.endswith(".tar.gz")
+            or s3_key.endswith(".zip")
+        ):
             tf = aws.s3_download_to_tempfile(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             uncompress_code(tf.name, temp_dir)
 
             self.handle_compressed_package(temp_dir)
 
-        elif s3_key.endswith('ipynb') or s3_key.endswith('py'):
-            target_file_name = s3_key.split('/')[1]
-            with open(os.path.join(temp_dir, target_file_name), 'wb') as tf:
+        elif s3_key.endswith("ipynb") or s3_key.endswith("py"):
+            target_file_name = s3_key.split("/")[1]
+            with open(os.path.join(temp_dir, target_file_name), "wb") as tf:
                 aws.s3_download_file(AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key, tf)
-
 
         output = [
             directory
@@ -560,7 +563,7 @@ class CodeAutomationHandler:
             if "__MACOSX" in output:
                 del output[output.index("__MACOSX")]
 
-        temp_dir += '/'
+        temp_dir += "/"
         file_list = os.listdir(temp_dir)
         file_list = set(filter(lambda x: x.endswith(".py"), file_list))
         ipynb_list = set(filter(lambda x: x.endswith(".ipynb"), file_list))
@@ -570,8 +573,6 @@ class CodeAutomationHandler:
             file_dir = output[0] if len(output) == 1 else None
             if file_dir:
                 temp_dir = os.path.join(temp_dir, file_dir)
-
-
 
         # save directory structure
         code_file_json = dir_to_json(temp_dir)
@@ -587,6 +588,7 @@ class CodeAutomationHandler:
             )
             code_structure_dao.insert_one(code_structure_do.__dict__)
         self.handle_ipynb(temp_dir)
+        self.handle_security(temp_dir)
 
         def _compress_tar(dir_path):
             if s3_key.endswith(".tar") or s3_key.endswith(".tar.gz"):
@@ -607,12 +609,14 @@ class CodeAutomationHandler:
                         for root, dir, files in os.walk(dir_path):
 
                             if len(files) > 0:
-                                print(f'root: {root}, dir_path: {dir_path}')
+                                print(f"root: {root}, dir_path: {dir_path}")
                                 arc_dir_name = root.lstrip(dir_path)
                             for file in files:
                                 write_file_name = os.path.join(root, file)
                                 arc_name = os.path.join(arc_dir_name, file)
-                                print(f'write write_file_name:{write_file_name}, arcname:{arc_name}')
+                                print(
+                                    f"write write_file_name:{write_file_name}, arcname:{arc_name}"
+                                )
                                 zip_file.write(
                                     write_file_name,
                                     arcname=arc_name,
@@ -622,22 +626,23 @@ class CodeAutomationHandler:
                     f.seek(0)
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, s3_key)
             elif s3_key.endswith(".ipynb"):
-                py_key = s3_key.split('.')[0] + '.py'
-                file_path = os.path.join(dir_path, py_key.split('/')[1])
-                logger.info(f'push {AwsS3.S3_JOB_MODEL_CODE_BUCKET}:{py_key}')
-                with open(file_path, 'rb') as f:
+                py_key = s3_key.split(".")[0] + ".py"
+                file_path = os.path.join(dir_path, py_key.split("/")[1])
+                logger.info(f"push {AwsS3.S3_JOB_MODEL_CODE_BUCKET}:{py_key}")
+                with open(file_path, "rb") as f:
                     aws.s3_put_by_tmp(f, AwsS3.S3_JOB_MODEL_CODE_BUCKET, py_key)
-                os.system(f'rm {file_path}')
+                os.system(f"rm {file_path}")
 
         # upload origin package with another
-        s3_key_list = s3_key.split('/')
-        filename_list = s3_key_list[1].split('.')
-        filename_list[0] = filename_list[0] + '_origin_package'
-
+        s3_key_list = s3_key.split("/")
+        filename_list = s3_key_list[1].split(".")
+        filename_list[0] = filename_list[0] + "_origin_package"
 
         _compress_tar(origin_dir)
 
-        logger.info(f'package already upload to {AwsS3.S3_JOB_MODEL_CODE_BUCKET} {s3_key}')
+        logger.info(
+            f"package already upload to {AwsS3.S3_JOB_MODEL_CODE_BUCKET} {s3_key}"
+        )
 
         shutil.rmtree(temp_dir)
         return {
@@ -678,17 +683,13 @@ class CodeAutomationHandler:
         return code_structure_dao.get_by_s3_key(result.group(1))
 
     def action(self, action):
-        actions = {
-            "check": self.check,
-            "get_code_structure": self.get_code_structure
-        }
+        actions = {"check": self.check, "get_code_structure": self.get_code_structure}
         return actions.get(action)
-
-
 
     """
     Handle api request
     """
+
     def api_gateway(self, event, context) -> Ret:
         try:
             logger.debug(event)
@@ -697,10 +698,10 @@ class CodeAutomationHandler:
                 data=self.action(event["action"])(event), code=HttpCode.HTTP_OK
             )
         except (
-                ResourceNotFoundException,
-                AwsServiceOperationException,
-                StatusCheckFailedException,
-                Exception,
+            ResourceNotFoundException,
+            AwsServiceOperationException,
+            StatusCheckFailedException,
+            Exception,
         ) as e:
             logger.exception(e)
             return Ret.fail(
@@ -720,18 +721,15 @@ def handle(event, context):
     return todict(code_automation_handler.api_gateway(event, context))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     service = CodeAutomationHandler()
 
     payload = {
         "action": "check",
-        "payload":
-            {
-                "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
-
-            }
+        "payload": {
+            "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
+        },
     }
 
     ret = service.api_gateway(payload, None)
-    print(f'check ret : {ret}')
-
+    print(f"check ret : {ret}")

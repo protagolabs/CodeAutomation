@@ -4,7 +4,7 @@ ARG FUNCTION_DIR="/code_automation"
 
 FROM ubuntu:20.04 as build-image
 
-   
+
 
 # Include global arg in this stage of the build
 ARG FUNCTION_DIR
