@@ -99,7 +99,7 @@ from automation_common.JobConst import (
     Regex,
 )
 from automation_common.Messages import msg
-from common.security import contain_miner_code
+from common.security import contain_bad_os_exec, contain_miner_code
 from template_platform import (
     CodePlatform,
 )
@@ -372,10 +372,13 @@ class CodeAutomationHandler:
         return line
 
     def handle_security(self, temp_dir):
-        for file in glob.glob(f"{temp_dir}/**/*.py", recursive=True):
+        for file in glob.glob(f"{temp_dir}/**/*", recursive=True):
             code = open(file)
-            if contain_miner_code(code.read()):
+            content = code.read()
+            if contain_miner_code(content):
                 raise Exception(f"contain miner code in {file}, please check")
+            if contain_bad_os_exec(content):
+                raise Exception(f"contain unsafe code in {file}, please check")
 
     def handle_ipynb(self, temp_dir):
         for file in glob.glob(f"{temp_dir}/**/*.ipynb", recursive=True):
