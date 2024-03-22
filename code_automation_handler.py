@@ -727,12 +727,12 @@ def handle(event, context):
 if __name__ == "__main__":
     service = CodeAutomationHandler()
 
-    payload = {
-        "action": "check",
-        "payload": {
-            "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
-        },
-    }
+    # payload = {
+    #     "action": "check",
+    #     "payload": {
+    #         "code_file": "https://protagolabs-netmind-job-model-code-prod.s3.amazonaws.com/41436775-6787-41b4-9e00-b80b840b8aaf/sovits4_colab.ipynb"
+    #     },
+    # }
 
-    ret = service.api_gateway(payload, None)
-    print(f"check ret : {ret}")
+    # ret = service.api_gateway(payload, None)
+    service.handle_security("/Users/yizhou/code/temp/mine")
