@@ -22,11 +22,9 @@ class OSSystemVisitor(ast.NodeVisitor):
 
         # 检查每个子命令是否都是pip install
         for subcommand in subcommands:
-            if (
-                not subcommand.strip().startswith("pip install")
-                and not subcommand.strip().startswith("getenv")
-                and not subcommand.strip().startswith("pip3 install")
-            ):
+            if not subcommand.strip().startswith(
+                "pip install"
+            ) and not subcommand.strip().startswith("pip3 install"):
                 return False
         return True
 
@@ -57,6 +55,7 @@ class OSSystemVisitor(ast.NodeVisitor):
             if (
                 isinstance(node.func, ast.Name)
                 and function_name.startswith("os")
+                and function_name not in ["getenv", "environ"]
                 and self.imported_system
             ) or (
                 isinstance(node.func, ast.Name)
@@ -80,7 +79,9 @@ class OSSystemVisitor(ast.NodeVisitor):
         ):
             module_name = self.import_aliases[node.func.value.id]
             function_name = node.func.attr
-            if module_name == "os" or module_name == "subprocess":
+            if (
+                module_name == "os" and function_name not in ["getenv", "environ"]
+            ) or module_name == "subprocess":
                 # 适用于Python 3.9及以上
                 command = astor.to_source(node.args[0]).strip()
 
