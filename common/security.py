@@ -28,6 +28,39 @@ class OSSystemVisitor(ast.NodeVisitor):
                 return False
         return True
 
+    def _check_value(self, value):
+        """
+        递归检查值是否包含对os模块的引用。
+        """
+        if isinstance(value, ast.Name) and self.import_aliases.get(
+            value.id, value.id
+        ) in [
+            "os",
+            "subprocess",
+        ]:
+            return True
+        elif isinstance(value, ast.Attribute) and self.import_aliases.get(
+            value.value.id, value.value.id
+        ) in [
+            "os",
+            "subprocess",
+        ]:
+            return True
+        elif isinstance(value, (ast.List, ast.Tuple, ast.Set)):
+            return any(self._check_value(elt) for elt in value.elts)
+        elif isinstance(value, ast.Dict):
+            return any(self._check_value(key) for key in value.keys) or any(
+                self._check_value(value) for value in value.values
+            )
+        return False
+
+    def visit_Assign(self, node):
+        # 检查赋值右侧是否是已知的模块别名
+        if self._check_value(node.value):
+            self.safe = False
+
+        self.generic_visit(node)
+
     def visit_Import(self, node):
         for alias in node.names:
             self.import_aliases[alias.asname or alias.name] = alias.name
