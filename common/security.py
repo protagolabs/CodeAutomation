@@ -22,7 +22,11 @@ class OSSystemVisitor(ast.NodeVisitor):
 
         # 检查每个子命令是否都是pip install
         for subcommand in subcommands:
-            if not subcommand.strip().startswith("pip install"):
+            if (
+                not subcommand.strip().startswith("pip install")
+                and not subcommand.strip().startswith("getenv")
+                and not subcommand.strip().startswith("pip3 install")
+            ):
                 return False
         return True
 
