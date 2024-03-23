@@ -8,6 +8,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8, <3.11"
+astor = "^0.8.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.244"
@@ -18,7 +19,6 @@ pytest = "^7.2.1"
 pytest-cov = "^4.0.0"
 pre-commit = "^3.0.4"
 mkdocs = "^1.4.2"
-astor = "^0.8.1"
 
 [build-system]
 requires = ["poetry-core"]
