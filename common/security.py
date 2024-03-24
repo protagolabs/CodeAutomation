@@ -34,17 +34,11 @@ class OSSystemVisitor(ast.NodeVisitor):
         """
         if isinstance(value, ast.Name) and self.import_aliases.get(
             value.id, value.id
-        ) in [
-            "os",
-            "subprocess",
-        ]:
+        ) in ["os", "subprocess", "exec", "compile", "ast", "eval"]:
             return True
         elif isinstance(value, ast.Attribute) and self.import_aliases.get(
             value.value.id, value.value.id
-        ) in [
-            "os",
-            "subprocess",
-        ]:
+        ) in ["os", "subprocess", "exec", "compile", "ast", "eval"]:
             return True
         elif isinstance(value, (ast.List, ast.Tuple, ast.Set)):
             return any(self._check_value(elt) for elt in value.elts)
@@ -64,6 +58,8 @@ class OSSystemVisitor(ast.NodeVisitor):
     def visit_Import(self, node):
         for alias in node.names:
             self.import_aliases[alias.asname or alias.name] = alias.name
+            if alias.name == "ast":
+                self.safe = False
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node):
@@ -79,6 +75,11 @@ class OSSystemVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and (
+            node.func.id in ["eval", "exec", "compile"]
+        ):
+            self.safe = False
+
         if (
             isinstance(node.func, ast.Name)
             and hasattr(node.func, "id")
