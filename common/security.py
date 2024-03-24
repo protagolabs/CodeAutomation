@@ -3,6 +3,53 @@ import re
 
 import astor  # 如果你使用Python 3.8及以下版本
 
+pip_whitelist = [
+    "numpy",
+    "pandas",
+    "torch",
+    "torchvision",
+    "torch-optimizer",
+    "datasets",
+    "huggingface-hub",
+    "fsspec",
+    "sentencepiece",
+    "accelerate",
+    "transformers",
+    "scipy",
+    "scikit-learn",
+    "tensorboard",
+    "argparse",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "nltk",
+    "gensim",
+    "keras",
+    "tensorflow",
+    "sklearn",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "fastai",
+    "spacy",
+    "plotly",
+    "bokeh",
+    "dash",
+    "dash-core-components",
+    "dash-html-components",
+    "dash-renderer",
+    "dash-table",
+    "dash-daq",
+    "flask",
+    "django",
+    "flask-restful",
+    "flask-restplus",
+    "flask-socketio",
+    "flask-wtf",
+    "flask-cors",
+    "git+https://github.com/protagolabs/NetMind-Mixin-Runtime",
+]
+
 
 class OSSystemVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -26,6 +73,14 @@ class OSSystemVisitor(ast.NodeVisitor):
                 "pip install"
             ) and not subcommand.strip().startswith("pip3 install"):
                 return False
+            else:
+                for package in subcommand.split(" ")[2:]:
+                    # pip包白名单
+                    if not any(
+                        package.strip().startswith(safe_package)
+                        for safe_package in pip_whitelist
+                    ):
+                        return False
         return True
 
     def _check_value(self, value):
