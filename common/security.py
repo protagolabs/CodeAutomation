@@ -47,6 +47,8 @@ pip_whitelist = [
     "flask-socketio",
     "flask-wtf",
     "flask-cors",
+    "trl",
+    "peft",
     "git+https://github.com/protagolabs/NetMind-Mixin-Runtime",
 ]
 
