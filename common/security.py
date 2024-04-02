@@ -1,57 +1,13 @@
 import ast
 import re
 
+try:
+    from AwsServices import aws
+except ModuleNotFoundError:
+    from boto3_layer.python.AwsServices import aws
+
 import astor  # 如果你使用Python 3.8及以下版本
-
-pip_whitelist = [
-    "numpy",
-    "pandas",
-    "torch",
-    "torchvision",
-    "torch-optimizer",
-    "datasets",
-    "huggingface-hub",
-    "fsspec",
-    "sentencepiece",
-    "accelerate",
-    "transformers",
-    "scipy",
-    "scikit-learn",
-    "tensorboard",
-    "argparse",
-    "matplotlib",
-    "seaborn",
-    "tqdm",
-    "nltk",
-    "gensim",
-    "keras",
-    "tensorflow",
-    "sklearn",
-    "xgboost",
-    "lightgbm",
-    "catboost",
-    "fastai",
-    "spacy",
-    "plotly",
-    "bokeh",
-    "dash",
-    "dash-core-components",
-    "dash-html-components",
-    "dash-renderer",
-    "dash-table",
-    "dash-daq",
-    "flask",
-    "django",
-    "flask-restful",
-    "flask-restplus",
-    "flask-socketio",
-    "flask-wtf",
-    "flask-cors",
-    "trl",
-    "peft",
-    "git+https://github.com/protagolabs/NetMind-Mixin-Runtime",
-]
-
+import json
 
 class OSSystemVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -60,6 +16,7 @@ class OSSystemVisitor(ast.NodeVisitor):
         self.safe = True
         self.imported_subprocess = False
         self.imported_system = False
+        self.pip_whitelist = json.loads(aws.get_secret("netmind/code_check_pip_whitelist"))
 
     def __is_command_safe(self, command):
         """
@@ -80,7 +37,7 @@ class OSSystemVisitor(ast.NodeVisitor):
                     # pip包白名单
                     if not any(
                         package.strip().startswith(safe_package)
-                        for safe_package in pip_whitelist
+                        for safe_package in self.pip_whitelist
                     ):
                         return False
         return True
