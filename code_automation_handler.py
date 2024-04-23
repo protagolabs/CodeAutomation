@@ -377,8 +377,9 @@ class CodeAutomationHandler:
             content = code.read()
             if contain_miner_code(content):
                 raise Exception(f"contain miner code in {file}, please check")
-            if contain_bad_os_exec(content):
-                raise Exception(f"contain unsafe code in {file}, please check")
+            unsafe, reason = contain_bad_os_exec(content)
+            if unsafe:
+                raise Exception(reason)
 
     def handle_ipynb(self, temp_dir):
         for file in glob.glob(f"{temp_dir}/**/*.ipynb", recursive=True):
@@ -735,4 +736,5 @@ if __name__ == "__main__":
     # }
 
     # ret = service.api_gateway(payload, None)
+    service.handle_ipynb("/Users/yizhou/code/temp/mine")
     service.handle_security("/Users/yizhou/code/temp/mine")
