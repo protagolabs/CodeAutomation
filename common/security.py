@@ -6,17 +6,22 @@ try:
 except ModuleNotFoundError:
     from boto3_layer.python.AwsServices import aws
 
-import astor  # 如果你使用Python 3.8及以下版本
 import json
+
+import astor  # 如果你使用Python 3.8及以下版本
+
 
 class OSSystemVisitor(ast.NodeVisitor):
     def __init__(self):
         # 初始化一个字典来跟踪模块导入及其别名
         self.import_aliases = {}
         self.safe = True
+        self.unsafe_reason = ""
         self.imported_subprocess = False
         self.imported_system = False
-        self.pip_whitelist = json.loads(aws.get_secret("netmind/code_check_pip_whitelist"))
+        self.pip_whitelist = json.loads(
+            aws.get_secret("netmind/code_check_pip_whitelist")
+        ).values()
 
     def __is_command_safe(self, command):
         """
@@ -50,9 +55,12 @@ class OSSystemVisitor(ast.NodeVisitor):
             value.id, value.id
         ) in ["os", "subprocess", "exec", "compile", "ast", "eval"]:
             return True
-        elif isinstance(value, ast.Attribute) and self.import_aliases.get(
-            value.value.id, value.value.id
-        ) in ["os", "subprocess", "exec", "compile", "ast", "eval"]:
+        elif (
+            isinstance(value, ast.Attribute)
+            and hasattr(value.value, "id")
+            and self.import_aliases.get(value.value.id, value.value.id)
+            in ["os", "subprocess", "exec", "compile", "ast", "eval"]
+        ):
             return True
         elif isinstance(value, (ast.List, ast.Tuple, ast.Set)):
             return any(self._check_value(elt) for elt in value.elts)
@@ -66,6 +74,7 @@ class OSSystemVisitor(ast.NodeVisitor):
         # 检查赋值右侧是否是已知的模块别名
         if self._check_value(node.value):
             self.safe = False
+            self.unsafe_reason = 'Please do not assign these module to a variable: "os", "subprocess", "exec", "compile", "ast", "eval"'
 
         self.generic_visit(node)
 
@@ -74,6 +83,7 @@ class OSSystemVisitor(ast.NodeVisitor):
             self.import_aliases[alias.asname or alias.name] = alias.name
             if alias.name == "ast":
                 self.safe = False
+                self.unsafe_reason = 'Please do not import "ast" module'
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node):
@@ -93,6 +103,9 @@ class OSSystemVisitor(ast.NodeVisitor):
             node.func.id in ["eval", "exec", "compile"]
         ):
             self.safe = False
+            self.unsafe_reason = (
+                'Please do not use any of these: "eval", "exec", "compile"'
+            )
 
         if (
             isinstance(node.func, ast.Name)
@@ -114,11 +127,12 @@ class OSSystemVisitor(ast.NodeVisitor):
                 command = astor.to_source(node.args[0]).strip()
 
                 # 移除字符串两端的引号
-                command = command.strip("'\"")
+                command = command.strip("ubBfFrR'\" ")
 
                 # 检查命令是否安全
                 if not self.__is_command_safe(command):
                     self.safe = False
+                    self.unsafe_reason = "unsafe command: {}".format(command)
 
         if (
             isinstance(node.func, ast.Attribute)
@@ -134,11 +148,12 @@ class OSSystemVisitor(ast.NodeVisitor):
                 command = astor.to_source(node.args[0]).strip()
 
                 # 移除字符串两端的引号
-                command = command.strip("'\"")
+                command = command.strip("ubBfFrR'\" ")
 
                 # 检查命令是否安全
                 if not self.__is_command_safe(command):
                     self.safe = False
+                    self.unsafe_reason = "unsafe command: {}".format(command)
 
         self.generic_visit(node)
 
@@ -155,7 +170,7 @@ def contain_bad_os_exec(code):
     tree = ast.parse(code)
     visitor = OSSystemVisitor()
     visitor.visit(tree)
-    return not visitor.safe
+    return not visitor.safe, visitor.unsafe_reason
 
 
 def contain_miner_code(content: str):
