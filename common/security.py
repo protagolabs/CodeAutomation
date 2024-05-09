@@ -70,6 +70,17 @@ class OSSystemVisitor(ast.NodeVisitor):
             )
         return False
 
+    def visit_Subscript(self, node):
+        """检查是否存在通过字典访问的调用。"""
+        if isinstance(node.value, ast.Attribute) and isinstance(node.slice, ast.Index):
+            module_name = self.import_aliases[node.value.value.id]
+            if module_name == "os":
+                # 检测到字典形式的访问，例如 os.__dict__['xxx']
+                self.safe = False
+                self.unsafe_reason = "Please do not access functions of 'os' via dict"
+        # 继续遍历子节点
+        self.generic_visit(node)
+
     def visit_Assign(self, node):
         # 检查赋值右侧是否是已知的模块别名
         if self._check_value(node.value):
@@ -165,6 +176,8 @@ class OSSystemVisitor(ast.NodeVisitor):
 
 def contain_bad_os_exec(code):
     if code.find("tmate") != -1:
+        return True
+    if code.find("fromhex") != -1:
         return True
 
     tree = ast.parse(code)
