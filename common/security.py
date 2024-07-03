@@ -73,7 +73,7 @@ class OSSystemVisitor(ast.NodeVisitor):
     def visit_Subscript(self, node):
         """检查是否存在通过字典访问的调用。"""
         if isinstance(node.value, ast.Attribute) and isinstance(node.slice, ast.Index):
-            module_name = self.import_aliases[node.value.value.id]
+            module_name = self.import_aliases.get(node.value.value.id)
             if module_name == "os":
                 # 检测到字典形式的访问，例如 os.__dict__['xxx']
                 self.safe = False
